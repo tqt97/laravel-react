@@ -1,0 +1,13 @@
+{
+    "errors.session_expired": "Your session expired. Please try again.",
+    "errors.page_title": "Something went wrong",
+    "errors.403.title": "Access denied",
+    "errors.403.description": "You do not have permission to perform this action.",
+    "errors.404.title": "Page not found",
+    "errors.404.description": "The page you requested could not be found.",
+    "errors.500.title": "Server error",
+    "errors.500.description": "An unexpected error occurred. Please try again.",
+    "errors.back": "Go back",
+    "errors.retry": "Try again",
+    "errors.request_id": "Request ID"
+}
