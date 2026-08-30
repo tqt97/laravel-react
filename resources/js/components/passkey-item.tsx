@@ -11,6 +11,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import type { Passkey } from '@/types/auth';
+import { useTranslation } from '@/hooks/use-translation';
 
 type Props = {
     passkey: Passkey;
@@ -19,6 +20,7 @@ type Props = {
 
 export default function PasskeyItem({ passkey, onDelete }: Props) {
     const [isDeleting, setIsDeleting] = useState(false);
+    const { t } = useTranslation();
 
     const handleDelete = () => {
         setIsDeleting(true);
@@ -43,13 +45,13 @@ export default function PasskeyItem({ passkey, onDelete }: Props) {
                         )}
                     </div>
                     <p className="text-muted-foreground text-sm">
-                        Added {passkey.created_at_diff}
+                        {t('Added')} {passkey.created_at_diff}
                         {passkey.last_used_at_diff && (
                             <>
                                 <span className="text-muted-foreground/50 mx-1">
                                     /
                                 </span>
-                                Last used {passkey.last_used_at_diff}
+                                {t('Last used')} {passkey.last_used_at_diff}
                             </>
                         )}
                     </p>
@@ -64,26 +66,28 @@ export default function PasskeyItem({ passkey, onDelete }: Props) {
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                         <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Remove</span>
+                        <span className="sr-only">{t('Remove')}</span>
                     </Button>
                 </DialogTrigger>
                 <DialogContent>
-                    <DialogTitle>Remove passkey</DialogTitle>
+                    <DialogTitle>{t('Remove passkey')}</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to remove the "{passkey.name}"
-                        passkey? You will no longer be able to use it to sign
-                        in.
+                        {t(
+                            'Are you sure you want to remove the ":name" passkey? You will no longer be able to use it to sign in.',
+                        ).replace(':name', passkey.name)}
                     </DialogDescription>
                     <DialogFooter className="gap-2">
                         <DialogClose asChild>
-                            <Button variant="secondary">Cancel</Button>
+                            <Button variant="secondary">{t('Cancel')}</Button>
                         </DialogClose>
                         <Button
                             variant="destructive"
                             onClick={handleDelete}
                             disabled={isDeleting}
                         >
-                            {isDeleting ? 'Removing...' : 'Remove passkey'}
+                            {isDeleting
+                                ? t('Removing...')
+                                : t('Remove passkey')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
