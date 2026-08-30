@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\App;
 
 final class LocaleController extends Controller
 {
-    public function update(LocaleUpdateRequest $request, UpdateLocale $action): RedirectResponse
+    public function __invoke(LocaleUpdateRequest $request, UpdateLocale $action): RedirectResponse
     {
         $locale = $request->validated('locale');
         $action->execute($request->user(), $locale);
