@@ -11,13 +11,15 @@ class LocaleUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_locale_update_requires_authentication()
+    public function test_guest_can_update_locale_in_the_session()
     {
         $response = $this->patch(route('locale.update'), [
             'locale' => Locale::VIETNAMESE->value,
         ]);
 
-        $response->assertRedirect(route('login'));
+        $response
+            ->assertRedirect()
+            ->assertSessionHas('locale', Locale::VIETNAMESE->value);
     }
 
     public function test_authenticated_user_can_update_locale()

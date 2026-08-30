@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 import { useTranslation } from '@/hooks/use-translation';
+import LanguageSwitcher from '@/components/language-switcher';
 
 type Props = {
     passwordRules: string;
@@ -20,6 +21,9 @@ export default function Register({ passwordRules }: Props) {
     return (
         <>
             <Head title={t('Register')} />
+            <div className="flex justify-end">
+                <LanguageSwitcher />
+            </div>
             <Form
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}

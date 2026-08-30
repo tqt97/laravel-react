@@ -8,9 +8,16 @@ use Illuminate\Support\Facades\DB;
 
 final class UpdateLocale
 {
-    public function execute(User $user, string $locale): void
+    public function execute(?User $user, string $locale): void
     {
-        $locale = Locale::tryFrom($locale)->value ?? Locale::ENGLISH->value;
+        $localeEnum = Locale::tryFrom($locale);
+        $locale = $localeEnum instanceof Locale
+            ? $localeEnum->value
+            : Locale::ENGLISH->value;
+
+        if ($user === null) {
+            return;
+        }
 
         DB::transaction(static function () use ($user, $locale): void {
             $user->forceFill(['locale' => $locale])->save();
