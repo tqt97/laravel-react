@@ -55,7 +55,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             <div className="grid gap-2">
                                 <div className="flex items-center">
                                     <Label htmlFor="password">
-                                        {t('Password')}
+                                        {t('auth.password')}
                                     </Label>
                                     {canResetPassword && (
                                         <TextLink
@@ -63,7 +63,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                             className="ml-auto text-sm"
                                             tabIndex={5}
                                         >
-                                            {t('Forgot your password?')}
+                                            {t('auth.forgot_password_link')}
                                         </TextLink>
                                     )}
                                 </div>
@@ -73,7 +73,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                     required
                                     tabIndex={2}
                                     autoComplete="current-password"
-                                    placeholder={t('Password')}
+                                    placeholder={t('auth.password')}
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -85,7 +85,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={3}
                                 />
                                 <Label htmlFor="remember">
-                                    {t('Remember me')}
+                                    {t('auth.remember_me')}
                                 </Label>
                             </div>
 
@@ -97,14 +97,14 @@ export default function Login({ status, canResetPassword }: Props) {
                                 data-test="login-button"
                             >
                                 {processing && <Spinner />}
-                                {t('Log in')}
+                                {t('auth.login')}
                             </Button>
                         </div>
 
                         <div className="text-muted-foreground text-center text-sm">
-                            {t("Don't have an account?")}{' '}
+                            {t('auth.no_account')}{' '}
                             <TextLink href={register()} tabIndex={5}>
-                                {t('Sign up')}
+                                {t('auth.sign_up')}
                             </TextLink>
                         </div>
                     </>

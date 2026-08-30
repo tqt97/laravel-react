@@ -65,7 +65,7 @@ export default function Register({ passwordRules }: Props) {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="password">
-                                    {t('Password')}
+                                    {t('auth.password')}
                                 </Label>
                                 <PasswordInput
                                     id="password"
@@ -73,7 +73,7 @@ export default function Register({ passwordRules }: Props) {
                                     tabIndex={3}
                                     autoComplete="new-password"
                                     name="password"
-                                    placeholder={t('Password')}
+                                    placeholder={t('auth.password')}
                                     passwordrules={passwordRules}
                                 />
                                 <InputError message={errors.password} />
@@ -81,7 +81,7 @@ export default function Register({ passwordRules }: Props) {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="password_confirmation">
-                                    {t('Confirm password')}
+                                    {t('auth.confirm_password_field')}
                                 </Label>
                                 <PasswordInput
                                     id="password_confirmation"
@@ -89,7 +89,9 @@ export default function Register({ passwordRules }: Props) {
                                     tabIndex={4}
                                     autoComplete="new-password"
                                     name="password_confirmation"
-                                    placeholder={t('Confirm password')}
+                                    placeholder={t(
+                                        'auth.confirm_password_field',
+                                    )}
                                     passwordrules={passwordRules}
                                 />
                                 <InputError
@@ -104,14 +106,14 @@ export default function Register({ passwordRules }: Props) {
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
-                                {t('Create account')}
+                                {t('auth.create_account')}
                             </Button>
                         </div>
 
                         <div className="text-muted-foreground text-center text-sm">
-                            {t('Already have an account?')}{' '}
+                            {t('auth.have_account')}{' '}
                             <TextLink href={login()} tabIndex={6}>
-                                {t('Log in')}
+                                {t('auth.login')}
                             </TextLink>
                         </div>
                     </>
