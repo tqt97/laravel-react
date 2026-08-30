@@ -20,9 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             HandleAppearance::class,
+            SetLocale::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-            SetLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
