@@ -13,6 +13,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 
+Route::patch('settings/locale', LocaleController::class)->name('locale.update');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
@@ -25,7 +27,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
-    Route::patch('settings/locale', LocaleController::class)->name('locale.update');
 });
 
 Route::get('.well-known/passkey-endpoints', function () {
