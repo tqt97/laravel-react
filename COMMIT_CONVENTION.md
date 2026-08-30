@@ -6,13 +6,13 @@ Dự án áp dụng chuẩn **Conventional Commits**.
 
 Mục tiêu:
 
-* Lịch sử Git rõ ràng và dễ đọc.
-* Mỗi commit thể hiện chính xác một thay đổi.
-* Dễ review code.
-* Dễ tìm kiếm và truy vết thay đổi.
-* Hỗ trợ tạo changelog tự động.
-* Hỗ trợ Semantic Versioning.
-* Giúp quá trình revert, cherry-pick và debug thuận tiện hơn.
+- Lịch sử Git rõ ràng và dễ đọc.
+- Mỗi commit thể hiện chính xác một thay đổi.
+- Dễ review code.
+- Dễ tìm kiếm và truy vết thay đổi.
+- Hỗ trợ tạo changelog tự động.
+- Hỗ trợ Semantic Versioning.
+- Giúp quá trình revert, cherry-pick và debug thuận tiện hơn.
 
 ---
 
@@ -26,9 +26,9 @@ Commit message sử dụng cấu trúc:
 
 Trong đó:
 
-* `type`: Loại thay đổi.
-* `scope`: Phạm vi thay đổi, không bắt buộc.
-* `description`: Mô tả ngắn gọn thay đổi.
+- `type`: Loại thay đổi.
+- `scope`: Phạm vi thay đổi, không bắt buộc.
+- `description`: Mô tả ngắn gọn thay đổi.
 
 Ví dụ:
 
@@ -459,10 +459,10 @@ feat(booking): add reservation cancellation
 
 Commit nên chứa:
 
-* Implementation.
-* Validation liên quan.
-* Authorization liên quan.
-* Test trực tiếp của feature.
+- Implementation.
+- Validation liên quan.
+- Authorization liên quan.
+- Test trực tiếp của feature.
 
 Không cần bắt buộc tách thành:
 
@@ -685,17 +685,17 @@ git add -p
 
 Một commit hoàn chỉnh nên:
 
-* Có mục đích rõ ràng.
-* Không chứa debug code.
-* Không chứa file tạm.
-* Không chứa secret.
-* Không chứa `.env`.
-* Không chứa code đã comment vô lý.
-* Không chứa thay đổi ngoài phạm vi.
-* Pass formatter.
-* Pass lint.
-* Pass relevant tests.
-* Có thể review độc lập.
+- Có mục đích rõ ràng.
+- Không chứa debug code.
+- Không chứa file tạm.
+- Không chứa secret.
+- Không chứa `.env`.
+- Không chứa code đã comment vô lý.
+- Không chứa thay đổi ngoài phạm vi.
+- Pass formatter.
+- Pass lint.
+- Pass relevant tests.
+- Có thể review độc lập.
 
 ---
 
@@ -826,20 +826,20 @@ Chỉ cần đọc lịch sử này, developer đã có thể hiểu khá rõ pr
 
 Trước mỗi commit, kiểm tra:
 
-* [ ] Commit chỉ chứa một logical change.
-* [ ] Không có file ngoài phạm vi.
-* [ ] Không có secret hoặc `.env`.
-* [ ] Không còn debug code.
-* [ ] Không còn `console.log`, `dd()`, `dump()` không cần thiết.
-* [ ] Code đã được format.
-* [ ] Lint đã pass nếu có.
-* [ ] Relevant tests đã pass.
-* [ ] Build đã pass nếu thay đổi frontend/build.
-* [ ] Migration đã được kiểm tra nếu thay đổi database.
-* [ ] Commit message đúng convention.
-* [ ] Description mô tả chính xác thay đổi.
-* [ ] Không sử dụng commit message chung chung.
-* [ ] Lock file được cập nhật nếu dependency thay đổi.
+- [ ] Commit chỉ chứa một logical change.
+- [ ] Không có file ngoài phạm vi.
+- [ ] Không có secret hoặc `.env`.
+- [ ] Không còn debug code.
+- [ ] Không còn `console.log`, `dd()`, `dump()` không cần thiết.
+- [ ] Code đã được format.
+- [ ] Lint đã pass nếu có.
+- [ ] Relevant tests đã pass.
+- [ ] Build đã pass nếu thay đổi frontend/build.
+- [ ] Migration đã được kiểm tra nếu thay đổi database.
+- [ ] Commit message đúng convention.
+- [ ] Description mô tả chính xác thay đổi.
+- [ ] Không sử dụng commit message chung chung.
+- [ ] Lock file được cập nhật nếu dependency thay đổi.
 
 ---
 
