@@ -10,7 +10,7 @@ final class UpdateLocale
 {
     public function execute(User $user, string $locale): void
     {
-        $locale = Locale::tryFrom($locale)?->value ?? Locale::ENGLISH->value;
+        $locale = Locale::tryFrom($locale)->value ?? Locale::ENGLISH->value;
 
         DB::transaction(static function () use ($user, $locale): void {
             $user->forceFill(['locale' => $locale])->save();
