@@ -16,6 +16,11 @@ final class CheckTranslations extends Command
     {
         $default = Locale::fromValueOrDefault(config('app.locale'));
         $failed = false;
+        $requestedLocale = $this->option('locale');
+
+        if ($requestedLocale !== null && Locale::tryFrom($requestedLocale) === null) {
+            return self::FAILURE;
+        }
 
         foreach (Locale::cases() as $locale) {
             if ($locale === $default || ($this->option('locale') && $locale->value !== $this->option('locale'))) {
