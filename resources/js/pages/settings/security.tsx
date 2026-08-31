@@ -100,7 +100,7 @@ export default function Security(props: Props) {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="password_confirmation">
-                                    {t('Confirm password')}
+                                    {t('auth.confirm_password_field')}
                                 </Label>
 
                                 <PasswordInput
@@ -108,7 +108,9 @@ export default function Security(props: Props) {
                                     name="password_confirmation"
                                     className="mt-1 block w-full"
                                     autoComplete="new-password"
-                                    placeholder={t('Confirm password')}
+                                    placeholder={t(
+                                        'auth.confirm_password_field',
+                                    )}
                                     passwordrules={props.passwordRules}
                                 />
 

@@ -72,9 +72,9 @@ export default function PasskeyItem({ passkey, onDelete }: Props) {
                 <DialogContent>
                     <DialogTitle>{t('Remove passkey')}</DialogTitle>
                     <DialogDescription>
-                        {t(
-                            'Are you sure you want to remove the ":name" passkey? You will no longer be able to use it to sign in.',
-                        ).replace(':name', passkey.name)}
+                        {t('passkeys.remove_description', {
+                            name: passkey.name,
+                        })}
                     </DialogDescription>
                     <DialogFooter className="gap-2">
                         <DialogClose asChild>

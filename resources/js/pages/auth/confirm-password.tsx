@@ -17,27 +17,29 @@ export default function ConfirmPassword() {
 
     return (
         <>
-            <Head title={t('Confirm password')} />
+            <Head title={t('auth.confirm_password')} />
 
             <PasskeyVerify
                 routes={{
                     options: confirmOptions(),
                     submit: confirmStore(),
                 }}
-                label={t('Confirm with passkey')}
-                loadingLabel={t('Confirming...')}
-                separator={t('Or confirm with password')}
+                label={t('auth.confirm_with_passkey')}
+                loadingLabel={t('auth.confirming')}
+                separator={t('auth.or_confirm_password')}
             />
 
             <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="password">{t('Password')}</Label>
+                            <Label htmlFor="password">
+                                {t('auth.password')}
+                            </Label>
                             <PasswordInput
                                 id="password"
                                 name="password"
-                                placeholder={t('Password')}
+                                placeholder={t('auth.password')}
                                 autoComplete="current-password"
                                 autoFocus
                             />
@@ -52,7 +54,7 @@ export default function ConfirmPassword() {
                                 data-test="confirm-password-button"
                             >
                                 {processing && <Spinner />}
-                                {t('Confirm password')}
+                                {t('auth.confirm_password')}
                             </Button>
                         </div>
                     </div>

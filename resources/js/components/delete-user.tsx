@@ -44,7 +44,7 @@ export default function DeleteUser() {
                             variant="destructive"
                             data-test="delete-user-button"
                         >
-                            Delete account
+                            {t('Delete account')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -73,14 +73,14 @@ export default function DeleteUser() {
                                             htmlFor="password"
                                             className="sr-only"
                                         >
-                                            {t('Password')}
+                                            {t('common.password')}
                                         </Label>
 
                                         <PasswordInput
                                             id="password"
                                             name="password"
                                             ref={passwordInput}
-                                            placeholder={t('Password')}
+                                            placeholder={t('common.password')}
                                             autoComplete="current-password"
                                         />
 

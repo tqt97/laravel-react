@@ -15,7 +15,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
     return (
         <>
-            <Head title={t('Forgot password')} />
+            <Head title={t('auth.forgot_password')} />
 
             {status && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
@@ -52,7 +52,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                     {processing && (
                                         <LoaderCircle className="h-4 w-4 animate-spin" />
                                     )}
-                                    {t('Email password reset link')}
+                                    {t('auth.email_reset_link')}
                                 </Button>
                             </div>
                         </>
@@ -60,8 +60,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
                 </Form>
 
                 <div className="text-muted-foreground space-x-1 text-center text-sm">
-                    <span>{t('Or, return to')}</span>
-                    <TextLink href={login()}>{t('log in')}</TextLink>
+                    <span>{t('auth.return_to')}</span>
+                    <TextLink href={login()}>{t('auth.log_in')}</TextLink>
                 </div>
             </div>
         </>
