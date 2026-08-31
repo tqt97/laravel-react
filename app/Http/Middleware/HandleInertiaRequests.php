@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => app()->getLocale(),
+            'timezone' => $request->user()?->preferredTimezone() ?? config('app.timezone'),
             'translations' => fn (): array => app(TranslationLoader::class)->load(
                 Locale::fromValueOrDefault(app()->getLocale()),
             ),

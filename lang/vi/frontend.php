@@ -1,6 +1,12 @@
 <?php
 
 return [
+    'errors.419.title' => 'Trang đã hết hạn',
+    'errors.419.description' => 'Phiên làm việc đã hết hạn. Vui lòng tải lại và thử lại.',
+    'errors.429.title' => 'Quá nhiều yêu cầu',
+    'errors.429.description' => 'Vui lòng chờ một lát rồi thử lại.',
+    'errors.503.title' => 'Dịch vụ tạm thời không khả dụng',
+    'errors.503.description' => 'Dịch vụ hiện tạm thời không khả dụng.',
     'A name helps you identify this passkey later.' => 'Tên giúp bạn nhận diện passkey này về sau.',
     'Account information' => 'Thông tin tài khoản',
     'Actions' => 'Thao tác',

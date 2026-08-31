@@ -19,7 +19,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property int $id
  * @property string $name
  * @property string $email
- * @property Locale $locale
+ * @property Locale|null $locale
+ * @property string $timezone
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -29,12 +30,26 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'locale'])]
+#[Fillable(['name', 'email', 'password', 'locale', 'timezone'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    public function preferredLocale(): Locale
+    {
+        return $this->locale
+            ?? Locale::tryFrom((string) config('app.fallback_locale', Locale::default()->value))
+            ?? Locale::default();
+    }
+
+    public function preferredTimezone(): string
+    {
+        return in_array($this->timezone, timezone_identifiers_list(), true)
+            ? $this->timezone
+            : (string) config('app.timezone', 'UTC');
+    }
 
     /**
      * Get the attributes that should be cast.
