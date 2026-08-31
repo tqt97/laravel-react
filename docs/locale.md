@@ -117,6 +117,14 @@ Tên field hiển thị cho người dùng được khai báo trong `validation.
 
 Translation cache tự thay đổi khi nội dung hoặc metadata của file PHP thay đổi. Có thể xóa application cache nếu cần làm mới ngay trong môi trường production.
 
+### Error page và exception response
+
+Exception handler trong [`bootstrap/app.php`](../bootstrap/app.php) trả về `errors/error` cho Inertia với các status `403`, `404`, `419`, `429`, `500` và `503`. Response này dùng lại `HandleInertiaRequests::share()` để đảm bảo `locale`, `timezone` và `translations` có cùng logic với request bình thường; không tự xây dựng một bộ props riêng.
+
+`LocaleResolver` có thể được gọi trước middleware `StartSession` trong một số lỗi sớm. Vì vậy resolver phải kiểm tra `$request->hasSession()` trước khi đọc session. Nếu user đã đăng nhập nhưng `users.locale` là `null`, thứ tự resolve vẫn tiếp tục qua session, cookie, `Accept-Language` rồi fallback.
+
+`TimezoneResolver` luôn kiểm tra timezone của user và `APP_TIMEZONE` bằng `timezone_identifiers_list()`. Giá trị không hợp lệ sẽ fallback về timezone ứng dụng, và nếu cấu hình ứng dụng cũng sai thì fallback cuối cùng là `UTC`. Không truyền trực tiếp giá trị chưa kiểm tra vào `Intl.DateTimeFormat`.
+
 ## Persistence policy
 
 ```text
