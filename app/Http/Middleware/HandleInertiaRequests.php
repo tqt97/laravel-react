@@ -3,12 +3,15 @@
 namespace App\Http\Middleware;
 
 use App\Enums\Locale;
+use App\Support\Locale\TimezoneResolver;
 use App\Support\Translations\TranslationLoader;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    public function __construct(private readonly TimezoneResolver $timezoneResolver) {}
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -45,7 +48,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => app()->getLocale(),
-            'timezone' => $request->user()?->preferredTimezone() ?? config('app.timezone'),
+            'timezone' => $this->timezoneResolver->resolve($request->user()?->timezone),
             'translations' => fn (): array => app(TranslationLoader::class)->load(
                 Locale::fromValueOrDefault(app()->getLocale()),
             ),

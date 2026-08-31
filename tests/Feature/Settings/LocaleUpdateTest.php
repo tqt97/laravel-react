@@ -4,7 +4,9 @@ namespace Tests\Feature\Settings;
 
 use App\Enums\Locale;
 use App\Models\User;
+use App\Support\Locale\LocaleResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -94,6 +96,20 @@ class LocaleUpdateTest extends TestCase
         $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());
     }
 
+    public function test_authenticated_user_without_saved_locale_uses_session_locale(): void
+    {
+        $user = User::factory()->make(['locale' => null]);
+        $request = Request::create('/');
+        $request->setUserResolver(fn (): User => $user);
+        $request->setLaravelSession(session()->driver());
+        $request->session()->put('locale', Locale::VIETNAMESE->value);
+
+        $this->assertSame(
+            Locale::VIETNAMESE,
+            app(LocaleResolver::class)->resolve($request),
+        );
+    }
+
     public function test_inertia_shares_locale_timezone_and_translations(): void
     {
         $user = User::factory()->create([
@@ -114,6 +130,15 @@ class LocaleUpdateTest extends TestCase
         $user = User::factory()->create(['timezone' => 'Invalid/Timezone']);
 
         $this->assertSame(config('app.timezone'), $user->preferredTimezone());
+    }
+
+    public function test_invalid_application_timezone_falls_back_to_utc(): void
+    {
+        config(['app.timezone' => 'Invalid/Timezone']);
+
+        $user = User::factory()->create(['timezone' => 'Invalid/Timezone']);
+
+        $this->assertSame('UTC', $user->preferredTimezone());
     }
 
     public function test_unsupported_locale_is_rejected(): void

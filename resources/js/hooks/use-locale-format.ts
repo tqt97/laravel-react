@@ -3,7 +3,18 @@ import { usePage } from '@inertiajs/react';
 
 export function useLocaleFormat() {
     const { locale } = useTranslation();
-    const timezone = String(usePage().props.timezone ?? 'UTC');
+    const requestedTimezone = String(usePage().props.timezone ?? 'UTC');
+    const timezone = (() => {
+        try {
+            new Intl.DateTimeFormat(locale, {
+                timeZone: requestedTimezone,
+            });
+
+            return requestedTimezone;
+        } catch {
+            return 'UTC';
+        }
+    })();
 
     return {
         formatDate: (

@@ -11,7 +11,7 @@ final class LocaleResolver
     public function resolve(Request $request): Locale
     {
         $user = $request->user();
-        $candidate = ($user instanceof User ? $user->preferredLocale()->value : null)
+        $candidate = ($user instanceof User ? $user->locale?->value : null)
             ?? $request->session()->get('locale')
             ?? $request->cookie(config('locale.cookie.name'))
             ?? $this->browserLocale($request)

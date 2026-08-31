@@ -46,6 +46,8 @@ Middleware [`SetLocale`](../app/Http/Middleware/SetLocale.php) chọn locale cho
 
 Authenticated user dùng middleware alias `auth.locale` sau `auth`, vì vậy locale trong database được ưu tiên hơn session.
 
+Nếu `users.locale` là `null` (ví dụ dữ liệu cũ chưa được backfill), resolver tiếp tục kiểm tra session, cookie và `Accept-Language`; không được dùng fallback của `preferredLocale()` để che mất các preference này.
+
 Locale luôn được kiểm tra qua `Locale::tryFrom()` trước khi gọi `App::setLocale()`.
 
 ## Lưu trữ
@@ -304,7 +306,9 @@ Locale và timezone là hai khái niệm độc lập:
 - Locale quyết định ngôn ngữ, format số và currency.
 - Timezone quyết định cách hiển thị ngày giờ.
 - `User::preferredTimezone()` kiểm tra timezone có nằm trong `timezone_identifiers_list()` hay không và fallback về `APP_TIMEZONE`/`config('app.timezone')`.
+- Nếu cả timezone của user và `APP_TIMEZONE` đều không hợp lệ, backend luôn fallback về `UTC` trước khi share sang React.
 - `useLocaleFormat().formatDate()` dùng timezone đã được share từ backend.
+- React vẫn có fallback `UTC` khi browser không nhận diện được timezone, tránh `RangeError` từ `Intl.DateTimeFormat`.
 
 Migration timezone mặc định user hiện tại về `UTC`. Nếu mở Settings cho user đổi timezone, request mới phải validate bằng danh sách timezone chuẩn và cập nhật `users.timezone`; field này đã được cho phép mass assignment.
 
