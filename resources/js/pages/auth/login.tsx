@@ -84,7 +84,10 @@ export default function Login({ status, canResetPassword }: Props) {
                                     name="remember"
                                     tabIndex={3}
                                 />
-                                <Label htmlFor="remember">
+                                <Label
+                                    htmlFor="remember"
+                                    className="hover:cursor-pointer"
+                                >
                                     {t('auth.remember_me')}
                                 </Label>
                             </div>

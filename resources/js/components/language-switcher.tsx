@@ -38,7 +38,7 @@ export default function LanguageSwitcher() {
                 disabled={processing}
                 aria-label={t('Change language')}
                 aria-busy={processing}
-                className="bg-background rounded-md border px-2 py-1.5 text-sm"
+                className="bg-background rounded-md border px-2 py-1.5 text-sm hover:cursor-pointer disabled:cursor-not-allowed"
             >
                 {SUPPORTED_LOCALES.map((option) => (
                     <option key={option.value} value={option.value}>
