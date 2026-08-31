@@ -19,7 +19,7 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
 
     return (
         <>
-            <Head title={t('Reset password')} />
+            <Head title={t('auth.reset_password')} />
 
             <Form
                 {...update.form()}
@@ -46,14 +46,16 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="password">{t('Password')}</Label>
+                            <Label htmlFor="password">
+                                {t('auth.password')}
+                            </Label>
                             <PasswordInput
                                 id="password"
                                 name="password"
                                 autoComplete="new-password"
                                 className="mt-1 block w-full"
                                 autoFocus
-                                placeholder={t('Password')}
+                                placeholder={t('auth.password')}
                                 passwordrules={passwordRules}
                             />
                             <InputError message={errors.password} />
@@ -61,14 +63,14 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
 
                         <div className="grid gap-2">
                             <Label htmlFor="password_confirmation">
-                                {t('Confirm password')}
+                                {t('auth.confirm_password_field')}
                             </Label>
                             <PasswordInput
                                 id="password_confirmation"
                                 name="password_confirmation"
                                 autoComplete="new-password"
                                 className="mt-1 block w-full"
-                                placeholder={t('Confirm password')}
+                                placeholder={t('auth.confirm_password_field')}
                                 passwordrules={passwordRules}
                             />
                             <InputError
@@ -84,7 +86,7 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                             data-test="reset-password-button"
                         >
                             {processing && <Spinner />}
-                            {t('Reset password')}
+                            {t('auth.reset_password')}
                         </Button>
                     </div>
                 )}

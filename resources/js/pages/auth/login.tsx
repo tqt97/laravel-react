@@ -12,7 +12,6 @@ import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import PasskeyVerify from '@/components/passkey-verify';
 import { useTranslation } from '@/hooks/use-translation';
-import LanguageSwitcher from '@/components/language-switcher';
 
 type Props = {
     status?: string;
@@ -24,11 +23,7 @@ export default function Login({ status, canResetPassword }: Props) {
 
     return (
         <>
-            <Head title={t('Log in')} />
-
-            <div className="flex justify-end">
-                <LanguageSwitcher />
-            </div>
+            <Head title={t('auth.login')} />
 
             <PasskeyVerify />
 

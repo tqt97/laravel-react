@@ -77,8 +77,8 @@ export default function TwoFactorRecoveryCodes({
                             className="size-4"
                             aria-hidden="true"
                         />
-                        {codesAreVisible ? t('Hide') : t('View')}{' '}
-                        {t('Recovery codes')}
+                        {codesAreVisible ? t('common.hide') : t('common.view')}{' '}
+                        {t('common.recovery_codes')}
                     </Button>
 
                     {canRegenerateCodes && (
@@ -130,7 +130,7 @@ export default function TwoFactorRecoveryCodes({
                                         <div
                                             className="space-y-2"
                                             aria-label={t(
-                                                'Loading recovery codes',
+                                                'common.loading_recovery_codes',
                                             )}
                                         >
                                             {Array.from(
