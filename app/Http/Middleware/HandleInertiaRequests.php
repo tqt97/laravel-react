@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Locale;
+use App\Support\Translations\TranslationLoader;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\File;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -45,21 +45,8 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => app()->getLocale(),
-            'translations' => fn (): array => Cache::rememberForever(
-                'translations.'.app()->getLocale(),
-                fn (): array => collect(File::glob(lang_path(app()->getLocale().'/*.json')))
-                    ->merge(
-                        File::exists(lang_path(app()->getLocale().'.json'))
-                            ? [lang_path(app()->getLocale().'.json')]
-                            : [],
-                    )
-                    ->reduce(
-                        fn (array $translations, string $path): array => [
-                            ...$translations,
-                            ...(array) File::json($path),
-                        ],
-                        [],
-                    ),
+            'translations' => fn (): array => app(TranslationLoader::class)->load(
+                Locale::fromValueOrDefault(app()->getLocale()),
             ),
         ];
     }
