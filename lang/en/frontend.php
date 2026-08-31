@@ -1,6 +1,12 @@
 <?php
 
 return [
+    'errors.419.title' => 'Page expired',
+    'errors.419.description' => 'Your session expired. Please refresh and try again.',
+    'errors.429.title' => 'Too many requests',
+    'errors.429.description' => 'Please wait a moment and try again.',
+    'errors.503.title' => 'Service unavailable',
+    'errors.503.description' => 'The service is temporarily unavailable.',
     'A name helps you identify this passkey later.' => 'A name helps you identify this passkey later.',
     'Account information' => 'Account information',
     'Actions' => 'Actions',

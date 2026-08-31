@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\Locale;
+use App\Support\Locale\LocaleResolver;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -11,6 +12,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SetLocale
 {
+    public function __construct(private readonly LocaleResolver $resolver) {}
+
     /**
      * Handle an incoming request.
      *
@@ -18,13 +21,7 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Get the user's preferred locale
-        $candidate = $request->session()->get('locale')
-            ?? $request->cookie(config('locale.cookie.name'))
-            ?? config('app.fallback_locale', Locale::default()->value);
-
-        // Set the locale based on the user's preferred locale
-        $locale = Locale::fromValueOrDefault($candidate)->value;
+        $locale = $this->resolver->resolve($request)->value;
 
         App::setLocale($locale);
         Cookie::queue(config('locale.cookie.name'), $locale, config('locale.cookie.minutes'));

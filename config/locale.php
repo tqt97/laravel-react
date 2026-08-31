@@ -16,4 +16,5 @@ return [
     'frontend_namespaces' => [
         'frontend',
     ],
+    'accept_language' => env('LOCALE_ACCEPT_LANGUAGE', true),
 ];

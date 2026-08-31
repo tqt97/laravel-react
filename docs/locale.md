@@ -41,9 +41,12 @@ Middleware [`SetLocale`](../app/Http/Middleware/SetLocale.php) chọn locale cho
 
 1. Locale trong session.
 2. Cookie `app_locale`.
-3. `config('app.fallback_locale')`.
+3. Ngôn ngữ đầu tiên được hỗ trợ trong header `Accept-Language` nếu `LOCALE_ACCEPT_LANGUAGE=true`.
+4. `config('app.fallback_locale')`.
 
 Authenticated user dùng middleware alias `auth.locale` sau `auth`, vì vậy locale trong database được ưu tiên hơn session.
+
+Nếu `users.locale` là `null` (ví dụ dữ liệu cũ chưa được backfill), resolver tiếp tục kiểm tra session, cookie và `Accept-Language`; không được dùng fallback của `preferredLocale()` để che mất các preference này.
 
 Locale luôn được kiểm tra qua `Locale::tryFrom()` trước khi gọi `App::setLocale()`.
 
@@ -109,15 +112,24 @@ Tên field hiển thị cho người dùng được khai báo trong `validation.
 [`HandleInertiaRequests`](../app/Http/Middleware/HandleInertiaRequests.php) share các props:
 
 - `locale` — locale hiện tại.
+- `timezone` — timezone hợp lệ của user, hoặc `config('app.timezone')` nếu guest/giá trị không hợp lệ.
 - `translations` — các key trong namespace `frontend`, được load qua `TranslationLoader`, cache theo locale + namespace và fingerprint file.
 
 Translation cache tự thay đổi khi nội dung hoặc metadata của file PHP thay đổi. Có thể xóa application cache nếu cần làm mới ngay trong môi trường production.
+
+### Error page và exception response
+
+Exception handler trong [`bootstrap/app.php`](../bootstrap/app.php) trả về `errors/error` cho Inertia với các status `403`, `404`, `419`, `429`, `500` và `503`. Response này dùng lại `HandleInertiaRequests::share()` để đảm bảo `locale`, `timezone` và `translations` có cùng logic với request bình thường; không tự xây dựng một bộ props riêng.
+
+`LocaleResolver` có thể được gọi trước middleware `StartSession` trong một số lỗi sớm. Vì vậy resolver phải kiểm tra `$request->hasSession()` trước khi đọc session. Nếu user đã đăng nhập nhưng `users.locale` là `null`, thứ tự resolve vẫn tiếp tục qua session, cookie, `Accept-Language` rồi fallback.
+
+`TimezoneResolver` luôn kiểm tra timezone của user và `APP_TIMEZONE` bằng `timezone_identifiers_list()`. Giá trị không hợp lệ sẽ fallback về timezone ứng dụng, và nếu cấu hình ứng dụng cũng sai thì fallback cuối cùng là `UTC`. Không truyền trực tiếp giá trị chưa kiểm tra vào `Intl.DateTimeFormat`.
 
 ## Persistence policy
 
 ```text
 Authenticated: users.locale → session.locale + app_locale cookie
-Guest: session.locale → app_locale cookie → APP_FALLBACK_LOCALE
+Guest: session.locale → app_locale cookie → Accept-Language (tùy cấu hình) → APP_FALLBACK_LOCALE
 ```
 
 Khi user đổi locale trong Settings, cả DB, session và cookie được cập nhật. Khi logout, session có thể bị hủy nhưng cookie vẫn giữ ngôn ngữ cho lần truy cập guest tiếp theo. Khi đăng nhập trên thiết bị khác, locale được đọc từ DB rồi đồng bộ vào session/cookie của thiết bị đó.
@@ -222,3 +234,116 @@ Các hành vi tối thiểu cần test:
 - Locale session không hợp lệ fallback về `en`.
 - Toast đổi locale được hiển thị.
 - Cả English và Vietnamese đều có translation key cần thiết.
+
+## Kiến trúc tổng thể
+
+### Một resolver cho toàn bộ backend
+
+[`LocaleResolver`](../app/Support/Locale/LocaleResolver.php) là nơi duy nhất quyết định locale. Cả `SetLocale` và `SetAuthenticatedLocale` đều dùng resolver này để tránh mỗi middleware có một thứ tự ưu tiên khác nhau.
+
+Thứ tự thực tế:
+
+```text
+Authenticated: users.locale → session → cookie → Accept-Language (tùy cấu hình) → APP_FALLBACK_LOCALE
+Guest: session → app_locale cookie → Accept-Language (tùy cấu hình) → APP_FALLBACK_LOCALE
+```
+
+`auth.locale` phải luôn đứng sau `auth`. Middleware này chỉ áp dụng cho route authenticated; guest không có quyền gọi route `PATCH /settings/locale`.
+
+### Session, cookie và database
+
+- Guest có thể nhận locale từ session, cookie hoặc `Accept-Language`, nhưng không được ghi locale vào database.
+- User authenticated đổi locale tại Settings. Giá trị mới được ghi vào `users.locale`, session và cookie.
+- Khi logout, session có thể bị hủy; cookie vẫn giúp guest giữ lựa chọn trước đó.
+- Khi user đăng nhập trên thiết bị khác, `users.locale` được ưu tiên và đồng bộ lại vào session/cookie.
+- Cookie locale có tên và thời hạn cấu hình tại `config/locale.php`; cookie này phải nằm ngoài danh sách encrypted cookies vì middleware cần đọc giá trị của nó.
+
+### Cấu hình môi trường
+
+```dotenv
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_TIMEZONE=UTC
+LOCALE_ACCEPT_LANGUAGE=true
+LOCALE_COOKIE_NAME=app_locale
+LOCALE_COOKIE_MINUTES=525600
+```
+
+`LOCALE_ACCEPT_LANGUAGE=false` hữu ích khi ứng dụng phải luôn dùng locale đã chọn trong session/cookie và không muốn phụ thuộc ngôn ngữ trình duyệt.
+
+### Translation backend và React
+
+- `lang/{locale}/validation.php`: message validation theo cấu trúc Laravel, có thể nested.
+- `lang/{locale}/common.php`, `authorization.php`, `audit.php`: message backend/domain.
+- `lang/{locale}/frontend.php`: catalog duy nhất cho React.
+- `TranslationLoader`: đọc `frontend.php`, flatten key và share qua Inertia prop `translations`.
+- Không thêm bản dịch vào JSON hoặc hard-code text UI khi key translation đã tồn tại.
+
+Trong React, dùng:
+
+```tsx
+const { locale, t, tc } = useTranslation();
+const { formatDate, formatNumber, formatCurrency } = useLocaleFormat();
+
+t('auth.login');
+tc('items', count);
+formatDate(value);
+formatCurrency(amount, 'VND');
+```
+
+`resources/js/types/global.d.ts` khai báo `locale`, `timezone` và `translations` trong shared Inertia props. Khi thêm shared prop mới, phải cập nhật cả middleware share và type augmentation.
+
+### Placeholder và validation
+
+Placeholder phải giữ nguyên tên giữa các locale, ví dụ `:count`, `:attribute`, `:max`. Không đổi tên placeholder khi dịch vì Laravel sẽ không thể thay giá trị.
+
+Validation phải chạy sau middleware locale. Với route authenticated, dùng:
+
+```php
+Route::middleware(['auth', 'auth.locale'])->group(function (): void {
+    // protected routes
+});
+```
+
+Không dịch lại validation message ở React; frontend chỉ hiển thị lỗi đã được Laravel resolve theo `app()->getLocale()`.
+
+### Timezone và format
+
+Locale và timezone là hai khái niệm độc lập:
+
+- Locale quyết định ngôn ngữ, format số và currency.
+- Timezone quyết định cách hiển thị ngày giờ.
+- `User::preferredTimezone()` kiểm tra timezone có nằm trong `timezone_identifiers_list()` hay không và fallback về `APP_TIMEZONE`/`config('app.timezone')`.
+- Nếu cả timezone của user và `APP_TIMEZONE` đều không hợp lệ, backend luôn fallback về `UTC` trước khi share sang React.
+- `useLocaleFormat().formatDate()` dùng timezone đã được share từ backend.
+- React vẫn có fallback `UTC` khi browser không nhận diện được timezone, tránh `RangeError` từ `Intl.DateTimeFormat`.
+
+Migration timezone mặc định user hiện tại về `UTC`. Nếu mở Settings cho user đổi timezone, request mới phải validate bằng danh sách timezone chuẩn và cập nhật `users.timezone`; field này đã được cho phép mass assignment.
+
+### Error pages Inertia
+
+Các request Inertia có status `403`, `404`, `419`, `429`, `500`, `503` được render bởi [`resources/js/pages/errors/error.tsx`](../resources/js/pages/errors/error.tsx). Page chỉ nhận status code, lấy nội dung từ `frontend.php` và không hiển thị exception details trong production.
+
+### Kiểm tra CI và cache
+
+Chạy các lệnh sau trong CI:
+
+```bash
+php artisan translations:check
+composer run types:check
+npm run check
+npm run types:check
+php artisan test
+```
+
+`translations:check` so sánh flattened keys giữa locale mặc định và các locale còn lại. Một placeholder có thể xuất hiện nhiều lần trong cùng message và đó là hành vi hợp lệ của Laravel. Translation cache dùng fingerprint metadata của file PHP; không cần `TRANSLATION_CACHE_VERSION`. Sau deploy có thể chạy `php artisan optimize:clear` nếu application cache còn dữ liệu cũ.
+
+### Thêm locale mới
+
+1. Thêm case vào `app/Enums/Locale.php`.
+2. Cập nhật `resources/js/types/locale.ts` và danh sách locale frontend.
+3. Tạo `lang/{locale}/frontend.php`, `validation.php` và các file domain cần thiết.
+4. Duy trì cùng key và placeholder với locale mặc định.
+5. Kiểm tra `config('app.fallback_locale')`, cookie và `Accept-Language`.
+6. Bổ sung feature test cho resolver, validation và Inertia props.
+7. Chạy `php artisan translations:check`, PHPUnit, PHPStan và frontend checks.

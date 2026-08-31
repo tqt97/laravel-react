@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { DEFAULT_LOCALE, type Locale } from '@/types/locale';
+import type { Locale } from '@/types/locale';
 type TranslationProps = {
     locale?: Locale;
     translations?: Record<string, string>;
@@ -14,8 +14,7 @@ function interpolate(value: string, params: TranslationParams = {}): string {
 }
 
 export function useTranslation() {
-    const { locale = DEFAULT_LOCALE, translations = {} } =
-        usePage<TranslationProps>().props;
+    const { locale, translations } = usePage<TranslationProps>().props;
     const t = (
         key: string,
         paramsOrFallback?: TranslationParams | string,
