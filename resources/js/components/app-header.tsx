@@ -83,8 +83,12 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     variant="ghost"
                                     size="icon"
                                     className="mr-2 h-[34px] w-[34px]"
+                                    aria-label={t('common.navigation_menu')}
                                 >
-                                    <Menu className="h-5 w-5" />
+                                    <Menu
+                                        aria-hidden="true"
+                                        className="h-5 w-5"
+                                    />
                                 </Button>
                             </SheetTrigger>
                             <SheetContent
@@ -184,13 +188,17 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 variant="ghost"
                                 size="icon"
                                 className="group h-9 w-9 cursor-pointer"
+                                aria-label={t('Search')}
                             >
-                                <Search className="!size-5 opacity-80 group-hover:opacity-100" />
+                                <Search
+                                    aria-hidden="true"
+                                    className="!size-5 opacity-80 group-hover:opacity-100"
+                                />
                             </Button>
                             <div className="ml-1 hidden gap-1 lg:flex">
                                 {rightNavItems.map((item) => (
                                     <Tooltip key={item.title}>
-                                        <TooltipTrigger>
+                                        <TooltipTrigger asChild>
                                             <a
                                                 href={toUrl(item.href)}
                                                 target="_blank"
@@ -201,7 +209,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     {t(item.title)}
                                                 </span>
                                                 {item.icon && (
-                                                    <item.icon className="size-5 opacity-80 group-hover:opacity-100" />
+                                                    <item.icon
+                                                        aria-hidden="true"
+                                                        className="size-5 opacity-80 group-hover:opacity-100"
+                                                    />
                                                 )}
                                             </a>
                                         </TooltipTrigger>
@@ -217,6 +228,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 <Button
                                     variant="ghost"
                                     className="size-10 rounded-full p-1"
+                                    aria-label={t('Account menu')}
                                 >
                                     <Avatar className="size-8 overflow-hidden rounded-full">
                                         <AvatarImage

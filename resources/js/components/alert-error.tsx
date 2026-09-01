@@ -12,7 +12,7 @@ export default function AlertError({
     const { t } = useTranslation();
 
     return (
-        <Alert variant="destructive">
+        <Alert variant="destructive" aria-live="assertive">
             <AlertCircleIcon />
             <AlertTitle>{title || t('Something went wrong.')}</AlertTitle>
             <AlertDescription>

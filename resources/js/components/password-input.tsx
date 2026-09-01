@@ -28,12 +28,11 @@ export default function PasswordInput({
                 aria-label={
                     showPassword ? t('Hide password') : t('Show password')
                 }
-                tabIndex={-1}
             >
                 {showPassword ? (
-                    <EyeOff className="size-4" />
+                    <EyeOff aria-hidden="true" className="size-4" />
                 ) : (
-                    <Eye className="size-4" />
+                    <Eye aria-hidden="true" className="size-4" />
                 )}
             </button>
         </div>
