@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import type { Locale } from '@/types/locale';
+import type { Locale, TranslationKey } from '@/types/locale';
 type TranslationProps = {
     locale?: Locale;
     translations?: Record<string, string>;
@@ -14,8 +14,13 @@ function interpolate(value: string, params: TranslationParams = {}): string {
 }
 
 export function useTranslation() {
-    const { locale, translations } = usePage<TranslationProps>().props;
-    const t = (
+    const { locale, translations: pageTranslations } =
+        usePage<TranslationProps>().props;
+    const translations: Record<string, string> = pageTranslations ?? {};
+
+    const resolve = (key: string): string | undefined => translations[key];
+
+    const translate = (
         key: string,
         paramsOrFallback?: TranslationParams | string,
         fallback?: string,
@@ -23,26 +28,47 @@ export function useTranslation() {
         const params =
             typeof paramsOrFallback === 'string' ? {} : paramsOrFallback;
         const value =
-            translations[key] ??
+            resolve(key) ??
             (typeof paramsOrFallback === 'string'
                 ? paramsOrFallback
                 : fallback) ??
             key;
-        if (import.meta.env.DEV && !translations[key])
+        if (import.meta.env.DEV && resolve(key) === undefined)
             console.warn(`[i18n] Missing translation: ${key}`);
         return interpolate(value, params);
     };
 
-    const tc = (
+    const t = (
+        key: TranslationKey,
+        paramsOrFallback?: TranslationParams | string,
+        fallback?: string,
+    ): string => translate(key, paramsOrFallback, fallback);
+
+    // Use td only when a key is assembled at runtime. Static calls should use
+    // t so generated TranslationKey types can catch missing keys at build time.
+    const td = (
         key: string,
+        paramsOrFallback?: TranslationParams | string,
+        fallback?: string,
+    ): string => translate(key, paramsOrFallback, fallback);
+
+    const tc = (
+        key: TranslationKey,
         count: number,
         params: TranslationParams = {},
-    ): string =>
-        t(
-            `${key}.${count === 1 ? 'one' : 'other'}`,
-            { count, ...params },
-            t(key, { count, ...params }),
+    ): string => {
+        const pluralCategory = new Intl.PluralRules(locale ?? 'en').select(
+            count,
         );
+        const pluralKey = `${key}.${pluralCategory}`;
+        const pluralValue = resolve(pluralKey);
 
-    return { locale, t, tc };
+        if (pluralValue !== undefined) {
+            return interpolate(pluralValue, { count, ...params });
+        }
+
+        return td(key, { count, ...params });
+    };
+
+    return { locale, t, td, tc };
 }

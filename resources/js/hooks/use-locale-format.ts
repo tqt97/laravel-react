@@ -22,8 +22,8 @@ export function useLocaleFormat() {
             options?: Intl.DateTimeFormatOptions,
         ) =>
             new Intl.DateTimeFormat(locale, {
-                timeZone: timezone,
                 ...options,
+                timeZone: timezone,
             }).format(new Date(value)),
         formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
             new Intl.NumberFormat(locale, options).format(value),

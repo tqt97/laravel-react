@@ -1,15 +1,16 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Languages } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { update } from '@/routes/locale';
-import { LOCALES, SUPPORTED_LOCALES, type Locale } from '@/types/locale';
+import type { Locale, SupportedLocale } from '@/types/locale';
 
 export default function LanguageSwitcher() {
     const { locale, t } = useTranslation();
-    const languageLabel =
-        locale === LOCALES.VIETNAMESE ? t('Vietnamese') : t('English');
+    const supportedLocales =
+        usePage<{ supportedLocales?: SupportedLocale[] }>().props
+            .supportedLocales ?? [];
 
     const [processing, setProcessing] = useState(false);
     const changeLocale = (nextLocale: Locale) => {
@@ -40,9 +41,9 @@ export default function LanguageSwitcher() {
                 aria-busy={processing}
                 className="bg-background rounded-md border px-2 py-1.5 text-sm hover:cursor-pointer disabled:cursor-not-allowed"
             >
-                {SUPPORTED_LOCALES.map((option) => (
+                {supportedLocales.map((option) => (
                     <option key={option.value} value={option.value}>
-                        {option.value === locale ? languageLabel : option.label}
+                        {option.label}
                     </option>
                 ))}
             </select>

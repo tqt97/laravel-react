@@ -64,6 +64,14 @@ class LocaleUpdateTest extends TestCase
         $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());
     }
 
+    public function test_guest_resolves_regional_accept_language_to_supported_base_locale(): void
+    {
+        $this->withHeader('Accept-Language', 'vi-VN, en-US;q=0.8')
+            ->get(route('home'));
+
+        $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());
+    }
+
     public function test_guest_can_disable_accept_language_resolution(): void
     {
         config(['locale.accept_language' => false]);
@@ -91,6 +99,17 @@ class LocaleUpdateTest extends TestCase
         $user = User::factory()->create(['locale' => Locale::VIETNAMESE]);
 
         $this->actingAs($user)->withSession(['locale' => Locale::ENGLISH->value])
+            ->get(route('dashboard'));
+
+        $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());
+    }
+
+    public function test_authenticated_user_locale_takes_precedence_over_cookie(): void
+    {
+        $user = User::factory()->create(['locale' => Locale::VIETNAMESE]);
+
+        $this->actingAs($user)
+            ->withUnencryptedCookie(config('locale.cookie.name'), Locale::ENGLISH->value)
             ->get(route('dashboard'));
 
         $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());

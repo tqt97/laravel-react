@@ -1,17 +1,7 @@
-export const LOCALES = {
-    ENGLISH: 'en',
-    VIETNAMESE: 'vi',
-} as const;
+export type { Locale, TranslationKey } from './generated-locale';
+import type { Locale } from './generated-locale';
 
-export type Locale = (typeof LOCALES)[keyof typeof LOCALES];
-
-export const DEFAULT_LOCALE: Locale = LOCALES.ENGLISH;
-
-export const SUPPORTED_LOCALES = [
-    { value: LOCALES.ENGLISH, label: 'English' },
-    { value: LOCALES.VIETNAMESE, label: 'Tiếng Việt' },
-] as const;
-
-export function getNextLocale(locale: Locale): Locale {
-    return locale === LOCALES.VIETNAMESE ? LOCALES.ENGLISH : LOCALES.VIETNAMESE;
-}
+export type SupportedLocale = {
+    value: Locale;
+    label: string;
+};

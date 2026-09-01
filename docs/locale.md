@@ -1,183 +1,356 @@
-# Thiết kế và triển khai tính năng Locale
+# Locale và translation
 
-## Mục tiêu
+Tài liệu này mô tả toàn bộ hệ thống locale của Laravel 13 + Inertia React: kiến trúc, request lifecycle, translation runtime, validation, timezone, test và quy trình thêm ngôn ngữ.
 
-Cho phép người dùng chuyển đổi giữa tiếng Anh (`en`) và tiếng Việt (`vi`) trên cả public page và authenticated page. Locale phải được áp dụng cho:
+## 1. Mục tiêu và nguyên tắc
 
-- Nội dung backend dịch bằng Laravel Translator.
-- Label, heading, accessibility text và thông báo trên React.
-- Validation errors.
-- Toast notification sau khi đổi locale hoặc thực hiện thao tác.
+- Backend là source of truth cho locale, danh sách locale và translation catalog.
+- Locale hợp lệ chỉ được định nghĩa trong App\Enums\Locale.
+- Guest có thể nhận locale từ browser/session/cookie nhưng không được lưu vào database.
+- Chỉ authenticated user mới được gọi endpoint đổi locale.
+- Translation application dùng PHP files; không duy trì JSON/PHP duplicate.
+- Validation message do Laravel trả về theo app()->getLocale(); React không dịch lại message lỗi.
+- Locale và timezone là hai concern khác nhau.
+- Hệ thống không localize URL; locale được quản lý ở request/user preference.
 
-## Quy ước nguồn translation
+Laravel native hỗ trợ PHP/JSON translation, fallback locale, placeholder và pluralization. Project chọn PHP catalog để key/domain rõ ràng và kiểm tra parity bằng CI. Tham khảo [Laravel Localization](https://laravel.com/framework/docs/13.x/localization).
 
-Tất cả application translations dùng PHP làm source of truth. Không tạo hoặc chỉnh sửa JSON translation riêng cho từng locale.
+## 2. Kiến trúc tổng thể
 
-- `lang/{locale}/frontend.php` là nguồn duy nhất cho các key hiển thị trên React, kể cả accessibility text của sidebar, key auth và error page như `auth.login`, `common.navigation_menu` và `errors.403.title`.
-- Các file PHP theo domain (`common.php`, `authorization.php`, `audit.php`) chứa message backend; `validation.php` giữ đúng cấu trúc Laravel.
-- `validation.php` giữ cấu trúc chuẩn của Laravel, bao gồm các key nested như `password.letters` và `attributes.email`.
-- `TranslationLoader` chỉ load namespace được khai báo trong `config/locale.php`, flatten key và share cho React qua Inertia.
-- Frontend dùng key trong `frontend.php`, ví dụ `common.profile_updated`, `auth.login`, `authorization.roles`.
-
-Khi thêm hoặc sửa text cho React, cập nhật `frontend.php` của cả `en` và `vi`. Khi thêm message Laravel/backend, cập nhật file domain tương ứng của cả hai locale. Không commit bản JSON duplicate.
-
-## Locale được hỗ trợ
-
-Locale được định nghĩa tập trung tại [`app/Enums/Locale.php`](../app/Enums/Locale.php):
-
-```php
-enum Locale: string
-{
-    case ENGLISH = 'en';
-    case VIETNAMESE = 'vi';
-}
+```mermaid
+flowchart LR
+    E["HTTP request"] --> R["LocaleResolver"]
+    R --> L["Locale enum"]
+    L --> S["SetLocale middleware"]
+    S --> A["Application locale"]
+    S --> M["LocaleManager"]
+    M --> DB[("users.locale")]
+    M --> SS[("Session")]
+    M --> C[("Cookie")]
+    A --> I["HandleInertiaRequests"]
+    I --> P["Shared Inertia props"]
+    L --> T["TranslationLoader"]
+    T --> F["lang/{locale}/frontend.php"]
+    T --> P
+    P --> H["React helpers"]
 ```
 
-Frontend dùng type và constant tương ứng tại [`resources/js/types/locale.ts`](../resources/js/types/locale.ts).
+| Thành phần            | Trách nhiệm                            | Không nên làm           |
+| --------------------- | -------------------------------------- | ----------------------- |
+| Locale                | Enum locale hợp lệ và native label     | Đọc request/cookie      |
+| LocaleRegistry        | Metadata, validate value, language tag | Lưu preference          |
+| LocaleResolver        | Chọn locale của request                | Mutate session/database |
+| SetLocale             | Set application locale, sync request   | Xử lý form update       |
+| LocaleManager         | Persistence user/session/cookie        | Tự quyết định locale    |
+| TranslationLoader     | Load, flatten, cache PHP catalog       | Validate request locale |
+| HandleInertiaRequests | Share locale/timezone/catalog          | Resolve lại locale      |
+| useTranslation        | Dịch UI, interpolate, pluralize        | Thay backend validation |
+| useLocaleFormat       | Format date/number/currency            | Override timezone       |
 
-## Quy tắc chọn locale
-
-Middleware [`SetLocale`](../app/Http/Middleware/SetLocale.php) chọn locale cho request guest theo thứ tự:
-
-1. Locale trong session.
-2. Cookie `app_locale`.
-3. Ngôn ngữ đầu tiên được hỗ trợ trong header `Accept-Language` nếu `LOCALE_ACCEPT_LANGUAGE=true`.
-4. `config('app.fallback_locale')`.
-
-Authenticated user dùng middleware alias `auth.locale` sau `auth`, vì vậy locale trong database được ưu tiên hơn session.
-
-Nếu `users.locale` là `null` (ví dụ dữ liệu cũ chưa được backfill), resolver tiếp tục kiểm tra session, cookie và `Accept-Language`; không được dùng fallback của `preferredLocale()` để che mất các preference này.
-
-Locale luôn được kiểm tra qua `Locale::tryFrom()` trước khi gọi `App::setLocale()`.
-
-## Lưu trữ
-
-Migration thêm cột `users.locale` với giá trị mặc định là `en`.
-
-- Authenticated user: lưu locale trong database, session và cookie.
-- Guest: chỉ đọc locale từ session/cookie; không có quyền cập nhật locale.
-
-Route đổi locale:
-
-```http
-PATCH /settings/locale
-```
-
-Payload:
-
-```json
-{
-    "locale": "vi"
-}
-```
-
-Request được validate bằng `Rule::enum(Locale::class)`.
-
-## Backend implementation
-
-### Middleware
-
-`SetLocale` đọc session/cookie cho guest. Alias `auth.locale` trỏ tới `SetAuthenticatedLocale` và luôn được đặt sau `auth` để đọc đúng locale từ user, sau đó đồng bộ session và cookie.
-
-### Controller và Action
-
-[`LocaleController`](../app/Http/Controllers/Settings/LocaleController.php) nhận locale đã validate, gọi [`UpdateLocale`](../app/Actions/Settings/UpdateLocale.php), cập nhật session và set locale hiện tại.
-
-Toast dùng Inertia flash và backend dùng key namespace trong file PHP:
-
-```php
-Inertia::flash('toast', [
-    'type' => 'success',
-    'message' => __('common.language_updated'),
-]);
-```
-
-Không nên dùng `with('success')` cho toast nếu frontend đang lắng nghe `flash.toast`. `withInput()` và `withErrors()` vẫn dành cho form validation.
-
-### Validation messages
-
-Validation translations nằm tại:
-
-- [`lang/en/validation.php`](../lang/en/validation.php)
-- [`lang/vi/validation.php`](../lang/vi/validation.php)
-
-Laravel resolve validation message theo `app()->getLocale()` tại thời điểm request chạy. Vì vậy middleware locale phải chạy trước Fortify/Form Request/controller validation.
-
-Khi thêm validation rule mới, cần cập nhật cả hai file, bao gồm cả các key nested như `password.letters`, `password.mixed`, `password.numbers`, `password.symbols`, `password.uncompromised` và các biến thể `min.string`/`max.string` nếu rule có sử dụng.
-
-Tên field hiển thị cho người dùng được khai báo trong `validation.attributes`. Không nên dịch trực tiếp ở React; `InputError` nên hiển thị message đã được Laravel resolve.
-
-## Inertia translation props
-
-[`HandleInertiaRequests`](../app/Http/Middleware/HandleInertiaRequests.php) share các props:
-
-- `locale` — locale hiện tại.
-- `timezone` — timezone hợp lệ của user, hoặc `config('app.timezone')` nếu guest/giá trị không hợp lệ.
-- `translations` — các key trong namespace `frontend`, được load qua `TranslationLoader`, cache theo locale + namespace và fingerprint file.
-
-Translation cache tự thay đổi khi nội dung hoặc metadata của file PHP thay đổi. Có thể xóa application cache nếu cần làm mới ngay trong môi trường production.
-
-### Error page và exception response
-
-Exception handler trong [`bootstrap/app.php`](../bootstrap/app.php) trả về `errors/error` cho Inertia với các status `403`, `404`, `419`, `429`, `500` và `503`. Response này dùng lại `HandleInertiaRequests::share()` để đảm bảo `locale`, `timezone` và `translations` có cùng logic với request bình thường; không tự xây dựng một bộ props riêng.
-
-`LocaleResolver` có thể được gọi trước middleware `StartSession` trong một số lỗi sớm. Vì vậy resolver phải kiểm tra `$request->hasSession()` trước khi đọc session. Nếu user đã đăng nhập nhưng `users.locale` là `null`, thứ tự resolve vẫn tiếp tục qua session, cookie, `Accept-Language` rồi fallback.
-
-`TimezoneResolver` luôn kiểm tra timezone của user và `APP_TIMEZONE` bằng `timezone_identifiers_list()`. Giá trị không hợp lệ sẽ fallback về timezone ứng dụng, và nếu cấu hình ứng dụng cũng sai thì fallback cuối cùng là `UTC`. Không truyền trực tiếp giá trị chưa kiểm tra vào `Intl.DateTimeFormat`.
-
-## Persistence policy
+### Cấu trúc file
 
 ```text
-Authenticated: users.locale → session.locale + app_locale cookie
-Guest: session.locale → app_locale cookie → Accept-Language (tùy cấu hình) → APP_FALLBACK_LOCALE
+app/Enums/Locale.php
+app/Support/Locale/
+├── LocaleRegistry.php
+├── LocaleResolver.php
+├── LocaleManager.php
+└── TimezoneResolver.php
+app/Support/Translations/TranslationLoader.php
+app/Http/Middleware/SetLocale.php
+app/Http/Middleware/HandleInertiaRequests.php
+app/Http/Controllers/Settings/LocaleController.php
+app/Console/Commands/
+├── CheckTranslations.php
+└── GenerateTranslationTypes.php
+lang/{locale}/
+├── frontend.php
+├── validation.php
+├── common.php
+├── authorization.php
+└── audit.php
+resources/js/hooks/
+├── use-translation.ts
+└── use-locale-format.ts
+resources/js/types/generated-locale.ts
 ```
 
-Khi user đổi locale trong Settings, cả DB, session và cookie được cập nhật. Khi logout, session có thể bị hủy nhưng cookie vẫn giữ ngôn ngữ cho lần truy cập guest tiếp theo. Khi đăng nhập trên thiết bị khác, locale được đọc từ DB rồi đồng bộ vào session/cookie của thiết bị đó.
+Support/Locale là nhóm domain service dùng chung cho locale context. TranslationLoader nằm riêng vì quản lý nguồn và cache translation, không quản lý việc chọn locale.
 
-User mới khi đăng ký nhận locale hiện tại do middleware đã resolve; guest không cần gửi trường `locale` trong form.
+## 3. Nguồn sự thật và shared props
 
-## Frontend implementation
+Thêm locale bắt đầu từ App\Enums\Locale. LocaleRegistry tự đọc Locale::cases(), vì vậy React không được khai báo danh sách locale thứ hai.
 
-[`useTranslation`](../resources/js/hooks/use-translation.ts) cung cấp:
+```php
+'supportedLocales' => $this->localeRegistry->all(),
+```
+
+Locale::label() là native label, ví dụ English và Tiếng Việt; label không đổi theo locale hiện tại để nhận diện ngôn ngữ đích.
+
+| Prop             | Kiểu                           | Ý nghĩa                                 |
+| ---------------- | ------------------------------ | --------------------------------------- |
+| locale           | Locale                         | Locale đã resolve cho request           |
+| supportedLocales | SupportedLocale[]              | Options cho language switcher           |
+| timezone         | string                         | Timezone đã validate, fallback cuối UTC |
+| translations     | Record<TranslationKey, string> | Catalog frontend đã flatten             |
+
+Runtime helper vẫn fallback về object rỗng nếu custom response thiếu prop, nhưng response Inertia chuẩn phải cung cấp đầy đủ contract trên.
+
+## 4. Locale resolution
+
+```mermaid
+flowchart TD
+    A["Request"] --> B{"Valid user.locale?"}
+    B -->|yes| R["Resolve"]
+    B -->|no| C{"Valid session.locale?"}
+    C -->|yes| R
+    C -->|no| D{"Valid cookie?"}
+    D -->|yes| R
+    D -->|no| E{"Accept-Language enabled?"}
+    E -->|yes| F["Ordered language tags"]
+    F --> G{"Supported tag?"}
+    G -->|yes| R
+    G -->|no| H["APP_FALLBACK_LOCALE"]
+    E -->|no| H
+    H --> I{"Valid fallback?"}
+    I -->|yes| R
+    I -->|no| J["Locale::default"]
+```
+
+Precedence chính xác:
+
+```text
+user.locale
+→ session.locale
+→ LOCALE_COOKIE_NAME cookie
+→ Accept-Language
+→ APP_FALLBACK_LOCALE
+→ Locale::default()
+```
+
+Request::getLanguages() đã sắp xếp language tag theo quality value q. LocaleRegistry normalize dấu gạch ngang thành gạch dưới, thử exact match trước rồi base-language match:
+
+```text
+vi-VN → vi
+en-US → en
+en_GB → en_GB nếu enum có đăng ký en_GB
+```
+
+Invalid value bị bỏ qua để thử nguồn kế tiếp; không truyền dữ liệu user-controlled thẳng vào App::setLocale(). Nếu request chưa có session, resolver kiểm tra hasSession() trước khi đọc.
+
+## 5. Request lifecycle và persistence
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant W as Web middleware
+    participant R as LocaleResolver
+    participant S as SetLocale
+    participant M as LocaleManager
+    participant V as FormRequest
+    participant C as Controller
+    participant I as Inertia
+    B->>W: Request
+    W->>R: resolve(request)
+    R-->>S: Locale enum
+    S->>S: App::setLocale()
+    S->>M: syncRequest()
+    M-->>B: Queue session/cookie if needed
+    S->>V: Continue pipeline
+    V->>C: Validation using resolved locale
+    C->>I: Response and shared props
+    I-->>B: React page
+```
+
+SetLocale được append sau StartSession và trước validation. Điều này bảo đảm session đọc được, authenticated user được resolve trước controller và Form Request/Fortify tạo đúng validation message.
+
+Trong app hiện tại, Request::user() dùng default web session guard nên có thể resolve user từ session ngay trong SetLocale; route-level auth middleware không phải lúc đó mới làm user xuất hiện. Đây là behavior được regression test bằng trường hợp user locale khác session/cookie. Nếu sau này thêm guard hoặc authentication mechanism khác, phải kiểm tra lại middleware order và resolver contract.
+
+LocaleManager có hai operation:
+
+- syncRequest(): cập nhật session/cookie, không ghi database; chạy cho cả guest.
+- updateUser(): lưu preference lâu dài; chỉ gọi từ route đã qua auth.
+
+Route đổi locale là PATCH /settings/locale, dùng Rule::enum(Locale::class). Guest bị redirect và không thể cập nhật users.locale.
+
+Cookie mặc định app_locale nằm ngoài encrypted-cookie list. Nếu đổi LOCALE_COOKIE_NAME, phải cập nhật exception list trong bootstrap/app.php tương ứng.
+
+## 6. Translation backend và React
+
+```mermaid
+flowchart TD
+    P["lang/{locale}/frontend.php"] --> L["TranslationLoader"]
+    L --> F["Flatten nested arrays"]
+    F --> K["Namespaced keys and aliases"]
+    K --> C[("Cache: locale + namespace + content hash")]
+    C --> I["Inertia translations prop"]
+    I --> U["useTranslation"]
+```
+
+Backend dùng __() hoặc trans(). React dùng:
 
 ```tsx
-const { locale, t, tc } = useTranslation();
+const { t, td, tc } = useTranslation();
 
-<Button>{t('Save')}</Button>;
+t('auth.login');
+t('common.welcome', { name: 'An' });
+tc('items', count);
+const key = 'errors.' + status + '.title';
+td(key);
 ```
 
-`t()` hỗ trợ interpolation và `tc()` hỗ trợ hậu tố `.one`/`.other`. Missing key được cảnh báo trong development. `useLocaleFormat()` cung cấp format ngày, số và tiền tệ theo locale hiện tại.
+Khi thêm text UI, cập nhật frontend.php của mọi locale. Khi thêm message backend, cập nhật domain PHP tương ứng. Placeholder phải giữ nguyên tên như :count, :attribute, :max.
 
-### Language switcher
+### t() — static translation
 
-[`LanguageSwitcher`](../resources/js/components/language-switcher.tsx) dùng Wayfinder:
+t() dịch một TranslationKey tĩnh và có compile-time checking từ generated type.
 
 ```tsx
-import { update } from '@/routes/locale';
-
-router.patch(update.url(), { locale: nextLocale });
+t('auth.login');
+t('Save');
+t('common.welcome', { name: 'An' });
+t('unknown.key'); // TypeScript error nếu key chưa có
 ```
 
-Switcher chỉ được dùng trong appearance settings. Route đổi locale yêu cầu authenticated user; guest không có quyền cập nhật locale. Guest chỉ sử dụng locale đã có trong session/cookie.
+Placeholder dạng :name, :count, :attribute được thay từ params. Nếu thiếu key, helper dùng fallback nếu có; nếu không sẽ trả về key và cảnh báo trong development.
 
-## Translation parity
+### td() — dynamic translation
+
+td() dành cho key được tạo runtime:
+
+```tsx
+const key = 'errors.' + status + '.title';
+td(key);
+```
+
+Compiler không thể chứng minh dynamic key tồn tại, nên phải có runtime test hoặc chuyển về key tĩnh. Không dùng td() thay t() ở key tĩnh.
+
+### tc() — plural translation
+
+tc() chọn plural category bằng Intl.PluralRules rồi tìm key key.<category>:
+
+```tsx
+tc('items', count);
+```
+
+Catalog:
+
+```php
+return [
+    'items.one' => ':count item',
+    'items.other' => ':count items',
+];
+```
+
+Locale hiện tại có thể dùng one/other. Locale khác có thể cần zero, few, many hoặc category riêng. Generated type tự thêm root items từ plural keys để gọi tc('items', count) type-safe. Nếu category không tồn tại, helper fallback về key gốc.
+
+### Namespace collision
+
+Loader tạo key namespaced như frontend.auth.login và alias ngắn để tương thích code cũ. Nếu hai namespace có cùng leaf key, loader throw LogicException thay vì phụ thuộc namespace order. Khuyến nghị dùng key namespaced ổn định.
+
+## 7. Generated TypeScript types
+
+```bash
+php artisan translations:generate-types
+php artisan translations:generate-types --check
+```
+
+Command sinh Locale từ Locale::cases() và TranslationKey từ catalog frontend của app.locale. File resources/js/types/generated-locale.ts không được chỉnh sửa thủ công.
+
+Quy trình khi thêm key/locale:
+
+1. Sửa PHP enum/catalog.
+2. Chạy generator.
+3. Commit file generated cùng source.
+4. Chạy --check trong CI.
+
+Generated type tăng type safety frontend nhưng không thay thế backend validation.
+
+## 8. useLocaleFormat() và timezone
+
+```tsx
+const { formatDate, formatNumber, formatCurrency } = useLocaleFormat();
+
+formatDate(order.createdAt);
+formatNumber(1234567.89);
+formatCurrency(250000, 'VND');
+```
+
+| Helper                           | Chức năng                                   |
+| -------------------------------- | ------------------------------------------- |
+| formatDate(value, options?)      | Format ngày theo locale và timezone backend |
+| formatNumber(value, options?)    | Format số theo locale                       |
+| formatCurrency(value, currency?) | Format tiền tệ, mặc định VND                |
+
+Backend validate timezone bằng timezone_identifiers_list(). React kiểm tra thêm bằng Intl.DateTimeFormat và fallback UTC. formatDate() đặt timeZone sau options caller, nên caller không thể override timezone hệ thống.
+
+## 9. Validation và error page
+
+Validation catalog đặt tại:
+
+```text
+lang/en/validation.php
+lang/vi/validation.php
+```
+
+Luồng:
+
+```text
+SetLocale → FormRequest validation → Laravel translated message → Inertia error bag → React
+```
+
+React chỉ hiển thị message từ Laravel, không dịch lại errors.email. ValidationException tiếp tục đi qua flow validation chuẩn.
+
+Inertia error page hỗ trợ 403, 404, 419, 429, 500, 503. Exception details không gửi ra frontend; page chỉ dùng status và errors.{status}.* catalog.
+
+## 10. Kiểm tra và test
 
 ```bash
 php artisan translations:check
+php artisan translations:check --locale=vi
+php artisan translations:generate-types --check
+php artisan test
+composer run types:check
+npm run check
+npm run types:check
+npm run build
 ```
 
-Command kiểm tra key thiếu giữa locale mặc định và locale khác trên toàn bộ PHP translation namespace; nên chạy trong CI.
+translations:check kiểm tra parity, extra keys, literal key trong .ts/.tsx và namespace collision. Regex checker không chứng minh được dynamic key, alias translator hoặc key ghép runtime; các trường hợp này cần runtime test.
 
-Command này flatten các key nested của PHP translation, nên sẽ phát hiện trường hợp một locale thiếu `validation.password.*` dù key cha `password` vẫn tồn tại.
+| Nhóm            | Behavior cần test                                        |
+| --------------- | -------------------------------------------------------- |
+| Resolve         | user, session, cookie, browser, fallback, invalid input  |
+| Header          | exact/regional tag, quality values, unsupported language |
+| Authorization   | guest bị redirect; authenticated user được update        |
+| Persistence     | database, session, cookie, flash toast                   |
+| Translation     | parity, nested key, missing literal key                  |
+| Cache           | file content đổi thì catalog đổi ngay                    |
+| Namespace       | collision fail rõ ràng                                   |
+| Formatting      | invalid timezone, timezone không bị override             |
+| Error           | status và shared props giữ nguyên                        |
+| Generated types | file generated đồng bộ PHP source                        |
 
-## Triển khai production
+## 11. Thêm locale mới
 
-Thực hiện các bước sau sau mỗi lần thêm hoặc thay đổi locale/translation:
+1. Thêm case vào App\Enums\Locale.
+2. Thêm lang/{locale}/frontend.php với toàn bộ frontend key.
+3. Thêm validation.php và domain catalog cần dùng.
+4. Giữ nguyên key và placeholder của locale mặc định.
+5. Với regional locale, thống nhất enum value, thư mục và language tag.
+6. Bổ sung test exact/base Accept-Language, validation và shared props.
+7. Chạy php artisan translations:generate-types.
+8. Chạy toàn bộ verification.
+
+Không thêm locale trực tiếp vào React component hoặc resources/js/types/locale.ts.
+
+## 12. Deployment và troubleshooting
 
 ```bash
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan translations:check
+php artisan translations:generate-types --check
 npm ci
 npm run build
 php artisan optimize:clear
@@ -186,164 +359,20 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-Sau khi deploy, restart PHP-FPM/worker nếu hệ thống đang giữ tiến trình dài hạn. Không cần cấu hình `TRANSLATION_CACHE_VERSION`; translation tự invalidates theo fingerprint file. Nếu application cache vẫn giữ dữ liệu cũ, chạy `php artisan cache:clear`.
+Không commit .env chứa secret. LOCALE_TRANSLATION_CACHE_TTL chỉ cấu hình TTL; không cần TRANSLATION_CACHE_VERSION.
 
-Kiểm tra nhanh locale và validation trên production:
+### Validation hiển thị tiếng Anh
 
-1. Đăng nhập bằng user có `users.locale = vi`.
-2. Gửi một form sai dữ liệu, ví dụ bỏ trống tên hoặc nhập email không hợp lệ.
-3. Xác nhận message trả về là tiếng Việt và không còn chuỗi tiếng Anh mặc định.
-4. Chuyển sang `en` và lặp lại để kiểm tra cả hai locale.
+Kiểm tra users.locale, middleware order, validation.php, placeholder và config cache. Sau đó chạy php artisan translations:check.
 
-Nếu validation vẫn trả về tiếng Anh, kiểm tra lần lượt `users.locale`, session/cookie `app_locale`, middleware `auth.locale`/`SetLocale`, cache config và sự tồn tại của key trong `lang/{locale}/validation.php`.
+### React hiển thị translation key
 
-## Quy trình thêm locale mới
+Kiểm tra frontend.php của mọi locale, chạy checker, regenerate generated types. Với dynamic key, dùng td() và thêm runtime test.
 
-Khi thêm locale, thực hiện các bước:
+### Ngày giờ bị lỗi
 
-1. Thêm case vào `app/Enums/Locale.php`.
-2. Cập nhật frontend `Locale`/`LOCALES`.
-3. Thêm thư mục `lang/{locale}`.
-4. Bổ sung `lang/{locale}/frontend.php` cho React và PHP domain translations cho backend.
-5. Bổ sung PHP validation translations, giữ đúng cấu trúc nested.
-6. Kiểm tra migration/database constraint nếu có.
-7. Regenerate Wayfinder nếu route thay đổi:
+Kiểm tra users.timezone, APP_TIMEZONE là IANA timezone hợp lệ và không truyền timeZone override vào formatDate().
 
-    ```bash
-    php artisan wayfinder:generate --with-form
-    ```
+## 13. Quyết định package
 
-8. Bổ sung feature test cho locale mới.
-
-## Kiểm tra
-
-```bash
-npm run types:check
-npm run build
-php artisan test tests/Feature/Settings/LocaleUpdateTest.php
-php artisan test
-php artisan translations:check
-```
-
-Các hành vi tối thiểu cần test:
-
-- Guest không thể đổi locale.
-- Guest đọc được locale hợp lệ từ session/cookie.
-- Authenticated user đổi locale và database được cập nhật.
-- Locale không hợp lệ bị reject.
-- Locale session không hợp lệ fallback về `en`.
-- Toast đổi locale được hiển thị.
-- Cả English và Vietnamese đều có translation key cần thiết.
-
-## Kiến trúc tổng thể
-
-### Một resolver cho toàn bộ backend
-
-[`LocaleResolver`](../app/Support/Locale/LocaleResolver.php) là nơi duy nhất quyết định locale. Cả `SetLocale` và `SetAuthenticatedLocale` đều dùng resolver này để tránh mỗi middleware có một thứ tự ưu tiên khác nhau.
-
-Thứ tự thực tế:
-
-```text
-Authenticated: users.locale → session → cookie → Accept-Language (tùy cấu hình) → APP_FALLBACK_LOCALE
-Guest: session → app_locale cookie → Accept-Language (tùy cấu hình) → APP_FALLBACK_LOCALE
-```
-
-`auth.locale` phải luôn đứng sau `auth`. Middleware này chỉ áp dụng cho route authenticated; guest không có quyền gọi route `PATCH /settings/locale`.
-
-### Session, cookie và database
-
-- Guest có thể nhận locale từ session, cookie hoặc `Accept-Language`, nhưng không được ghi locale vào database.
-- User authenticated đổi locale tại Settings. Giá trị mới được ghi vào `users.locale`, session và cookie.
-- Khi logout, session có thể bị hủy; cookie vẫn giúp guest giữ lựa chọn trước đó.
-- Khi user đăng nhập trên thiết bị khác, `users.locale` được ưu tiên và đồng bộ lại vào session/cookie.
-- Cookie locale có tên và thời hạn cấu hình tại `config/locale.php`; cookie này phải nằm ngoài danh sách encrypted cookies vì middleware cần đọc giá trị của nó.
-
-### Cấu hình môi trường
-
-```dotenv
-APP_LOCALE=en
-APP_FALLBACK_LOCALE=en
-APP_TIMEZONE=UTC
-LOCALE_ACCEPT_LANGUAGE=true
-LOCALE_COOKIE_NAME=app_locale
-LOCALE_COOKIE_MINUTES=525600
-```
-
-`LOCALE_ACCEPT_LANGUAGE=false` hữu ích khi ứng dụng phải luôn dùng locale đã chọn trong session/cookie và không muốn phụ thuộc ngôn ngữ trình duyệt.
-
-### Translation backend và React
-
-- `lang/{locale}/validation.php`: message validation theo cấu trúc Laravel, có thể nested.
-- `lang/{locale}/common.php`, `authorization.php`, `audit.php`: message backend/domain.
-- `lang/{locale}/frontend.php`: catalog duy nhất cho React.
-- `TranslationLoader`: đọc `frontend.php`, flatten key và share qua Inertia prop `translations`.
-- Không thêm bản dịch vào JSON hoặc hard-code text UI khi key translation đã tồn tại.
-
-Trong React, dùng:
-
-```tsx
-const { locale, t, tc } = useTranslation();
-const { formatDate, formatNumber, formatCurrency } = useLocaleFormat();
-
-t('auth.login');
-tc('items', count);
-formatDate(value);
-formatCurrency(amount, 'VND');
-```
-
-`resources/js/types/global.d.ts` khai báo `locale`, `timezone` và `translations` trong shared Inertia props. Khi thêm shared prop mới, phải cập nhật cả middleware share và type augmentation.
-
-### Placeholder và validation
-
-Placeholder phải giữ nguyên tên giữa các locale, ví dụ `:count`, `:attribute`, `:max`. Không đổi tên placeholder khi dịch vì Laravel sẽ không thể thay giá trị.
-
-Validation phải chạy sau middleware locale. Với route authenticated, dùng:
-
-```php
-Route::middleware(['auth', 'auth.locale'])->group(function (): void {
-    // protected routes
-});
-```
-
-Không dịch lại validation message ở React; frontend chỉ hiển thị lỗi đã được Laravel resolve theo `app()->getLocale()`.
-
-### Timezone và format
-
-Locale và timezone là hai khái niệm độc lập:
-
-- Locale quyết định ngôn ngữ, format số và currency.
-- Timezone quyết định cách hiển thị ngày giờ.
-- `User::preferredTimezone()` kiểm tra timezone có nằm trong `timezone_identifiers_list()` hay không và fallback về `APP_TIMEZONE`/`config('app.timezone')`.
-- Nếu cả timezone của user và `APP_TIMEZONE` đều không hợp lệ, backend luôn fallback về `UTC` trước khi share sang React.
-- `useLocaleFormat().formatDate()` dùng timezone đã được share từ backend.
-- React vẫn có fallback `UTC` khi browser không nhận diện được timezone, tránh `RangeError` từ `Intl.DateTimeFormat`.
-
-Migration timezone mặc định user hiện tại về `UTC`. Nếu mở Settings cho user đổi timezone, request mới phải validate bằng danh sách timezone chuẩn và cập nhật `users.timezone`; field này đã được cho phép mass assignment.
-
-### Error pages Inertia
-
-Các request Inertia có status `403`, `404`, `419`, `429`, `500`, `503` được render bởi [`resources/js/pages/errors/error.tsx`](../resources/js/pages/errors/error.tsx). Page chỉ nhận status code, lấy nội dung từ `frontend.php` và không hiển thị exception details trong production.
-
-### Kiểm tra CI và cache
-
-Chạy các lệnh sau trong CI:
-
-```bash
-php artisan translations:check
-composer run types:check
-npm run check
-npm run types:check
-php artisan test
-```
-
-`translations:check` so sánh flattened keys giữa locale mặc định và các locale còn lại. Một placeholder có thể xuất hiện nhiều lần trong cùng message và đó là hành vi hợp lệ của Laravel. Translation cache dùng fingerprint metadata của file PHP; không cần `TRANSLATION_CACHE_VERSION`. Sau deploy có thể chạy `php artisan optimize:clear` nếu application cache còn dữ liệu cũ.
-
-### Thêm locale mới
-
-1. Thêm case vào `app/Enums/Locale.php`.
-2. Cập nhật `resources/js/types/locale.ts` và danh sách locale frontend.
-3. Tạo `lang/{locale}/frontend.php`, `validation.php` và các file domain cần thiết.
-4. Duy trì cùng key và placeholder với locale mặc định.
-5. Kiểm tra `config('app.fallback_locale')`, cookie và `Accept-Language`.
-6. Bổ sung feature test cho resolver, validation và Inertia props.
-7. Chạy `php artisan translations:check`, PHPUnit, PHPStan và frontend checks.
+Không dùng package localization ngoài Laravel native ở phase này. URL-localization package chỉ cần khi locale nằm trong URL/SEO; database translation loader chỉ cần khi admin chỉnh translation runtime. Implementation nội bộ hiện phù hợp với session/cookie preference, auth boundary, Inertia shared props và validation flow.
