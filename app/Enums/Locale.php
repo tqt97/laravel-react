@@ -15,6 +15,14 @@ enum Locale: string
         };
     }
 
+    public function flag(): string
+    {
+        return match ($this) {
+            self::ENGLISH => '🇬🇧',
+            self::VIETNAMESE => '🇻🇳',
+        };
+    }
+
     public static function default(): self
     {
         return self::ENGLISH;

@@ -7,7 +7,7 @@ use App\Enums\Locale;
 final class LocaleRegistry
 {
     /**
-     * @return array<int, array{value: string, label: string}>
+     * @return array<int, array{value: string, label: string, flag: string}>
      */
     public function all(): array
     {
@@ -15,6 +15,7 @@ final class LocaleRegistry
             static fn (Locale $locale): array => [
                 'value' => $locale->value,
                 'label' => $locale->label(),
+                'flag' => $locale->flag(),
             ],
             Locale::cases(),
         );

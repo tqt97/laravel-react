@@ -8,6 +8,10 @@ return [
         'system_role' => 'System roles cannot be modified.',
         'last_super_admin' => 'The last Super Admin must be preserved.',
         'invalid_delegation' => 'This authorization delegation is not allowed.',
+        'selected_users_missing' => 'One or more selected users no longer exist.',
+        'selected_users_cannot_delete' => 'One or more selected users cannot be deleted.',
+        'selected_users_cannot_restore' => 'One or more selected users cannot be restored.',
+        'last_admin' => 'The last administrator account must be preserved.',
     ],
     'roles' => ['super_admin' => 'Super Admin', 'admin' => 'Admin', 'user' => 'User'],
     'permissions' => [

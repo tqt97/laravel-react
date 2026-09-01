@@ -12,4 +12,6 @@ export type NavItem = {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    /** Disable prefetch for expensive destinations such as large admin lists. */
+    prefetch?: boolean | 'hover' | 'click' | 'mount';
 };
