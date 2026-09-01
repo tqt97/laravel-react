@@ -35,21 +35,21 @@ flowchart LR
     P --> H["React helpers"]
 ```
 
-| Thành phần | Trách nhiệm | Không nên làm |
-| --- | --- | --- |
-| Locale | Enum locale hợp lệ và native label | Đọc request/cookie |
-| LocaleRegistry | Metadata, validate value, language tag | Lưu preference |
-| LocaleResolver | Chọn locale của request | Mutate session/database |
-| SetLocale | Set application locale, sync request | Xử lý form update |
-| LocaleManager | Persistence user/session/cookie | Tự quyết định locale |
-| TranslationLoader | Load, flatten, cache PHP catalog | Validate request locale |
-| HandleInertiaRequests | Share locale/timezone/catalog | Resolve lại locale |
-| useTranslation | Dịch UI, interpolate, pluralize | Thay backend validation |
-| useLocaleFormat | Format date/number/currency | Override timezone |
+| Thành phần            | Trách nhiệm                            | Không nên làm           |
+| --------------------- | -------------------------------------- | ----------------------- |
+| Locale                | Enum locale hợp lệ và native label     | Đọc request/cookie      |
+| LocaleRegistry        | Metadata, validate value, language tag | Lưu preference          |
+| LocaleResolver        | Chọn locale của request                | Mutate session/database |
+| SetLocale             | Set application locale, sync request   | Xử lý form update       |
+| LocaleManager         | Persistence user/session/cookie        | Tự quyết định locale    |
+| TranslationLoader     | Load, flatten, cache PHP catalog       | Validate request locale |
+| HandleInertiaRequests | Share locale/timezone/catalog          | Resolve lại locale      |
+| useTranslation        | Dịch UI, interpolate, pluralize        | Thay backend validation |
+| useLocaleFormat       | Format date/number/currency            | Override timezone       |
 
 ### Cấu trúc file
 
-~~~text
+```text
 app/Enums/Locale.php
 app/Support/Locale/
 ├── LocaleRegistry.php
@@ -73,7 +73,7 @@ resources/js/hooks/
 ├── use-translation.ts
 └── use-locale-format.ts
 resources/js/types/generated-locale.ts
-~~~
+```
 
 Support/Locale là nhóm domain service dùng chung cho locale context. TranslationLoader nằm riêng vì quản lý nguồn và cache translation, không quản lý việc chọn locale.
 
@@ -81,18 +81,18 @@ Support/Locale là nhóm domain service dùng chung cho locale context. Translat
 
 Thêm locale bắt đầu từ App\Enums\Locale. LocaleRegistry tự đọc Locale::cases(), vì vậy React không được khai báo danh sách locale thứ hai.
 
-~~~php
+```php
 'supportedLocales' => $this->localeRegistry->all(),
-~~~
+```
 
 Locale::label() là native label, ví dụ English và Tiếng Việt; label không đổi theo locale hiện tại để nhận diện ngôn ngữ đích.
 
-| Prop | Kiểu | Ý nghĩa |
-| --- | --- | --- |
-| locale | Locale | Locale đã resolve cho request |
-| supportedLocales | SupportedLocale[] | Options cho language switcher |
-| timezone | string | Timezone đã validate, fallback cuối UTC |
-| translations | Record<TranslationKey, string> | Catalog frontend đã flatten |
+| Prop             | Kiểu                           | Ý nghĩa                                 |
+| ---------------- | ------------------------------ | --------------------------------------- |
+| locale           | Locale                         | Locale đã resolve cho request           |
+| supportedLocales | SupportedLocale[]              | Options cho language switcher           |
+| timezone         | string                         | Timezone đã validate, fallback cuối UTC |
+| translations     | Record<TranslationKey, string> | Catalog frontend đã flatten             |
 
 Runtime helper vẫn fallback về object rỗng nếu custom response thiếu prop, nhưng response Inertia chuẩn phải cung cấp đầy đủ contract trên.
 
@@ -119,22 +119,22 @@ flowchart TD
 
 Precedence chính xác:
 
-~~~text
+```text
 user.locale
 → session.locale
 → LOCALE_COOKIE_NAME cookie
 → Accept-Language
 → APP_FALLBACK_LOCALE
 → Locale::default()
-~~~
+```
 
 Request::getLanguages() đã sắp xếp language tag theo quality value q. LocaleRegistry normalize dấu gạch ngang thành gạch dưới, thử exact match trước rồi base-language match:
 
-~~~text
+```text
 vi-VN → vi
 en-US → en
 en_GB → en_GB nếu enum có đăng ký en_GB
-~~~
+```
 
 Invalid value bị bỏ qua để thử nguồn kế tiếp; không truyền dữ liệu user-controlled thẳng vào App::setLocale(). Nếu request chưa có session, resolver kiểm tra hasSession() trước khi đọc.
 
@@ -187,7 +187,7 @@ flowchart TD
 
 Backend dùng __() hoặc trans(). React dùng:
 
-~~~tsx
+```tsx
 const { t, td, tc } = useTranslation();
 
 t('auth.login');
@@ -195,7 +195,7 @@ t('common.welcome', { name: 'An' });
 tc('items', count);
 const key = 'errors.' + status + '.title';
 td(key);
-~~~
+```
 
 Khi thêm text UI, cập nhật frontend.php của mọi locale. Khi thêm message backend, cập nhật domain PHP tương ứng. Placeholder phải giữ nguyên tên như :count, :attribute, :max.
 
@@ -203,12 +203,12 @@ Khi thêm text UI, cập nhật frontend.php của mọi locale. Khi thêm messa
 
 t() dịch một TranslationKey tĩnh và có compile-time checking từ generated type.
 
-~~~tsx
+```tsx
 t('auth.login');
 t('Save');
 t('common.welcome', { name: 'An' });
 t('unknown.key'); // TypeScript error nếu key chưa có
-~~~
+```
 
 Placeholder dạng :name, :count, :attribute được thay từ params. Nếu thiếu key, helper dùng fallback nếu có; nếu không sẽ trả về key và cảnh báo trong development.
 
@@ -216,10 +216,10 @@ Placeholder dạng :name, :count, :attribute được thay từ params. Nếu th
 
 td() dành cho key được tạo runtime:
 
-~~~tsx
+```tsx
 const key = 'errors.' + status + '.title';
 td(key);
-~~~
+```
 
 Compiler không thể chứng minh dynamic key tồn tại, nên phải có runtime test hoặc chuyển về key tĩnh. Không dùng td() thay t() ở key tĩnh.
 
@@ -227,18 +227,18 @@ Compiler không thể chứng minh dynamic key tồn tại, nên phải có runt
 
 tc() chọn plural category bằng Intl.PluralRules rồi tìm key key.<category>:
 
-~~~tsx
+```tsx
 tc('items', count);
-~~~
+```
 
 Catalog:
 
-~~~php
+```php
 return [
     'items.one' => ':count item',
     'items.other' => ':count items',
 ];
-~~~
+```
 
 Locale hiện tại có thể dùng one/other. Locale khác có thể cần zero, few, many hoặc category riêng. Generated type tự thêm root items từ plural keys để gọi tc('items', count) type-safe. Nếu category không tồn tại, helper fallback về key gốc.
 
@@ -248,10 +248,10 @@ Loader tạo key namespaced như frontend.auth.login và alias ngắn để tư�
 
 ## 7. Generated TypeScript types
 
-~~~bash
+```bash
 php artisan translations:generate-types
 php artisan translations:generate-types --check
-~~~
+```
 
 Command sinh Locale từ Locale::cases() và TranslationKey từ catalog frontend của app.locale. File resources/js/types/generated-locale.ts không được chỉnh sửa thủ công.
 
@@ -266,19 +266,19 @@ Generated type tăng type safety frontend nhưng không thay thế backend valid
 
 ## 8. useLocaleFormat() và timezone
 
-~~~tsx
+```tsx
 const { formatDate, formatNumber, formatCurrency } = useLocaleFormat();
 
 formatDate(order.createdAt);
 formatNumber(1234567.89);
 formatCurrency(250000, 'VND');
-~~~
+```
 
-| Helper | Chức năng |
-| --- | --- |
-| formatDate(value, options?) | Format ngày theo locale và timezone backend |
-| formatNumber(value, options?) | Format số theo locale |
-| formatCurrency(value, currency?) | Format tiền tệ, mặc định VND |
+| Helper                           | Chức năng                                   |
+| -------------------------------- | ------------------------------------------- |
+| formatDate(value, options?)      | Format ngày theo locale và timezone backend |
+| formatNumber(value, options?)    | Format số theo locale                       |
+| formatCurrency(value, currency?) | Format tiền tệ, mặc định VND                |
 
 Backend validate timezone bằng timezone_identifiers_list(). React kiểm tra thêm bằng Intl.DateTimeFormat và fallback UTC. formatDate() đặt timeZone sau options caller, nên caller không thể override timezone hệ thống.
 
@@ -286,16 +286,16 @@ Backend validate timezone bằng timezone_identifiers_list(). React kiểm tra t
 
 Validation catalog đặt tại:
 
-~~~text
+```text
 lang/en/validation.php
 lang/vi/validation.php
-~~~
+```
 
 Luồng:
 
-~~~text
+```text
 SetLocale → FormRequest validation → Laravel translated message → Inertia error bag → React
-~~~
+```
 
 React chỉ hiển thị message từ Laravel, không dịch lại errors.email. ValidationException tiếp tục đi qua flow validation chuẩn.
 
@@ -303,7 +303,7 @@ Inertia error page hỗ trợ 403, 404, 419, 429, 500, 503. Exception details kh
 
 ## 10. Kiểm tra và test
 
-~~~bash
+```bash
 php artisan translations:check
 php artisan translations:check --locale=vi
 php artisan translations:generate-types --check
@@ -312,22 +312,22 @@ composer run types:check
 npm run check
 npm run types:check
 npm run build
-~~~
+```
 
 translations:check kiểm tra parity, extra keys, literal key trong .ts/.tsx và namespace collision. Regex checker không chứng minh được dynamic key, alias translator hoặc key ghép runtime; các trường hợp này cần runtime test.
 
-| Nhóm | Behavior cần test |
-| --- | --- |
-| Resolve | user, session, cookie, browser, fallback, invalid input |
-| Header | exact/regional tag, quality values, unsupported language |
-| Authorization | guest bị redirect; authenticated user được update |
-| Persistence | database, session, cookie, flash toast |
-| Translation | parity, nested key, missing literal key |
-| Cache | file content đổi thì catalog đổi ngay |
-| Namespace | collision fail rõ ràng |
-| Formatting | invalid timezone, timezone không bị override |
-| Error | status và shared props giữ nguyên |
-| Generated types | file generated đồng bộ PHP source |
+| Nhóm            | Behavior cần test                                        |
+| --------------- | -------------------------------------------------------- |
+| Resolve         | user, session, cookie, browser, fallback, invalid input  |
+| Header          | exact/regional tag, quality values, unsupported language |
+| Authorization   | guest bị redirect; authenticated user được update        |
+| Persistence     | database, session, cookie, flash toast                   |
+| Translation     | parity, nested key, missing literal key                  |
+| Cache           | file content đổi thì catalog đổi ngay                    |
+| Namespace       | collision fail rõ ràng                                   |
+| Formatting      | invalid timezone, timezone không bị override             |
+| Error           | status và shared props giữ nguyên                        |
+| Generated types | file generated đồng bộ PHP source                        |
 
 ## 11. Thêm locale mới
 
@@ -344,7 +344,7 @@ Không thêm locale trực tiếp vào React component hoặc resources/js/types
 
 ## 12. Deployment và troubleshooting
 
-~~~bash
+```bash
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan translations:check
@@ -355,7 +355,7 @@ php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-~~~
+```
 
 Không commit .env chứa secret. LOCALE_TRANSLATION_CACHE_TTL chỉ cấu hình TTL; không cần TRANSLATION_CACHE_VERSION.
 
