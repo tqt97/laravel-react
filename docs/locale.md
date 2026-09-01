@@ -164,6 +164,8 @@ sequenceDiagram
 
 SetLocale được append sau StartSession và trước validation. Điều này bảo đảm session đọc được, authenticated user được resolve trước controller và Form Request/Fortify tạo đúng validation message.
 
+Trong app hiện tại, Request::user() dùng default web session guard nên có thể resolve user từ session ngay trong SetLocale; route-level auth middleware không phải lúc đó mới làm user xuất hiện. Đây là behavior được regression test bằng trường hợp user locale khác session/cookie. Nếu sau này thêm guard hoặc authentication mechanism khác, phải kiểm tra lại middleware order và resolver contract.
+
 LocaleManager có hai operation:
 
 - syncRequest(): cập nhật session/cookie, không ghi database; chạy cho cả guest.

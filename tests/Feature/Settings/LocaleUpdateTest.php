@@ -104,6 +104,17 @@ class LocaleUpdateTest extends TestCase
         $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());
     }
 
+    public function test_authenticated_user_locale_takes_precedence_over_cookie(): void
+    {
+        $user = User::factory()->create(['locale' => Locale::VIETNAMESE]);
+
+        $this->actingAs($user)
+            ->withUnencryptedCookie(config('locale.cookie.name'), Locale::ENGLISH->value)
+            ->get(route('dashboard'));
+
+        $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());
+    }
+
     public function test_authenticated_user_without_saved_locale_uses_session_locale(): void
     {
         $user = User::factory()->make(['locale' => null]);

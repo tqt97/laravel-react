@@ -44,15 +44,21 @@ final class CheckTranslations extends Command
         }
 
         try {
+            $catalogs = [];
+
             foreach (Locale::cases() as $locale) {
-                $loader->load($locale);
+                $catalogs[$locale->value] = $loader->load($locale);
             }
+
+            // Keep the usage scan inside the same boundary as catalog loading:
+            // a default-locale collision must be reported as command failure.
+            $failed = $this->checkFrontendUsage(
+                $catalogs[$default->value],
+            ) || $failed;
         } catch (\LogicException $exception) {
             $this->error($exception->getMessage());
             $failed = true;
         }
-
-        $failed = $this->checkFrontendUsage($default, $loader) || $failed;
 
         return $failed ? self::FAILURE : self::SUCCESS;
     }
@@ -74,9 +80,11 @@ final class CheckTranslations extends Command
         return $keys;
     }
 
-    private function checkFrontendUsage(Locale $locale, TranslationLoader $loader): bool
+    /**
+     * @param  array<string, string>  $catalog
+     */
+    private function checkFrontendUsage(array $catalog): bool
     {
-        $catalog = $loader->load($locale);
         $missing = [];
 
         foreach (File::allFiles(resource_path('js')) as $file) {

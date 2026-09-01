@@ -20,7 +20,9 @@ class SetLocale
      * Handle an incoming request.
      *
      * This middleware is appended after StartSession and before validation so
-     * Laravel's translated validation messages use the resolved locale.
+     * Laravel's translated validation messages use the resolved locale. The
+     * default session guard can resolve an authenticated user here before the
+     * route-level auth middleware runs.
      *
      * @param  Closure(Request): (Response)  $next
      */
