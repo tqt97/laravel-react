@@ -376,3 +376,21 @@ Kiểm tra users.timezone, APP_TIMEZONE là IANA timezone hợp lệ và không 
 ## 13. Quyết định package
 
 Không dùng package localization ngoài Laravel native ở phase này. URL-localization package chỉ cần khi locale nằm trong URL/SEO; database translation loader chỉ cần khi admin chỉnh translation runtime. Implementation nội bộ hiện phù hợp với session/cookie preference, auth boundary, Inertia shared props và validation flow.
+
+## 14. Accessibility foundation
+
+Locale và giao diện phải giữ được khả năng sử dụng bằng bàn phím và trình đọc màn hình:
+
+- `SkipLink` được render một lần trong layout/page nằm bên trong Inertia component tree, trỏ tới `#main-content` của màn hình hiện tại.
+- Sau mỗi Inertia navigation, focus chuyển tới `main-content`; sau response validation, focus chuyển tới field đầu tiên có lỗi.
+- Key lỗi được đối chiếu với `name` của input/select/textarea; tên lồng nhau như `users[0][email]` cũng được normalize.
+- Nút chỉ có icon phải có `aria-label`; icon trang trí phải có `aria-hidden="true"`. Không đặt `tabIndex={-1}` cho control cần thao tác bằng bàn phím.
+- `Alert`, `InputError` và Sonner toast dùng live region để thông báo lỗi/thay đổi.
+- CSS tôn trọng `prefers-reduced-motion: reduce` và cung cấp outline rõ ràng cho `:focus-visible`.
+- Kiểm tra contrast semantic tokens ở light/dark theme bằng:
+
+```bash
+npm run a11y:contrast
+```
+
+Công cụ dùng ngưỡng WCAG AA 4.5:1. Đây là kiểm tra token nền tảng; màu hard-code, ảnh nền và trạng thái tương tác vẫn cần kiểm tra UI thực tế.

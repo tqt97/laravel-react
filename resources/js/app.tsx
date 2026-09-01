@@ -2,6 +2,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
+import { useAccessibility } from '@/hooks/use-accessibility';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
@@ -24,9 +25,15 @@ void createInertiaApp({
     },
     strictMode: true,
     withApp(app) {
+        function AccessibilityBoundary() {
+            useAccessibility();
+
+            return app;
+        }
+
         return (
             <TooltipProvider delayDuration={0}>
-                {app}
+                <AccessibilityBoundary />
                 <Toaster />
             </TooltipProvider>
         );

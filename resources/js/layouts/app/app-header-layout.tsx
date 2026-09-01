@@ -1,6 +1,7 @@
 import { AppContent } from '@/components/app-content';
 import { AppHeader } from '@/components/app-header';
 import { AppShell } from '@/components/app-shell';
+import { SkipLink } from '@/components/skip-link';
 import type { AppLayoutProps } from '@/types';
 
 export default function AppHeaderLayout({
@@ -9,8 +10,11 @@ export default function AppHeaderLayout({
 }: AppLayoutProps) {
     return (
         <AppShell variant="header">
+            <SkipLink />
             <AppHeader breadcrumbs={breadcrumbs} />
-            <AppContent variant="header">{children}</AppContent>
+            <AppContent id="main-content" tabIndex={-1} variant="header">
+                {children}
+            </AppContent>
         </AppShell>
     );
 }
