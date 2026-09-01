@@ -64,6 +64,14 @@ class LocaleUpdateTest extends TestCase
         $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());
     }
 
+    public function test_guest_resolves_regional_accept_language_to_supported_base_locale(): void
+    {
+        $this->withHeader('Accept-Language', 'vi-VN, en-US;q=0.8')
+            ->get(route('home'));
+
+        $this->assertSame(Locale::VIETNAMESE->value, app()->getLocale());
+    }
+
     public function test_guest_can_disable_accept_language_resolution(): void
     {
         config(['locale.accept_language' => false]);

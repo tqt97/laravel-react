@@ -22,27 +22,8 @@ enum Locale: string
 
     public static function fromValueOrDefault(mixed $value): self
     {
-        return self::tryFrom((string) $value) ?? self::default();
-    }
-
-    /** @return array<string, string> */
-    public static function labels(): array
-    {
-        return array_reduce(self::cases(), static function (array $labels, self $locale): array {
-            $labels[$locale->value] = $locale->label();
-
-            return $labels;
-        }, []);
-    }
-
-    /**
-     * @return array<string>
-     */
-    public static function values(): array
-    {
-        return array_map(
-            static fn (self $locale): string => $locale->value,
-            self::cases(),
-        );
+        return is_string($value)
+            ? self::tryFrom($value) ?? self::default()
+            : self::default();
     }
 }

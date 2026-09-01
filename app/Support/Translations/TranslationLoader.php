@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\File;
 
 final class TranslationLoader
 {
+    public function __construct(private readonly string $languagePath = '') {}
+
     /**
      * @param  array<int, string>|null  $namespaces
      * @return array<string, string>
@@ -25,16 +27,28 @@ final class TranslationLoader
             $fingerprint,
         );
 
-        return Cache::rememberForever($key, function () use ($locale, $namespaces): array {
+        return Cache::remember($key, config('locale.translation_cache_ttl', 86400), function () use ($locale, $namespaces): array {
             $result = [];
             foreach ($namespaces as $namespace) {
-                $path = lang_path($locale->value.'/'.$namespace.'.php');
+                $path = $this->path($locale, $namespace);
                 if (! File::exists($path)) {
                     continue;
                 }
 
                 foreach ($this->flatten(File::getRequire($path)) as $translationKey => $value) {
                     $result[$namespace.'.'.$translationKey] = $value;
+
+                    // Short aliases are kept for the existing React API, but
+                    // collisions must fail instead of depending on namespace
+                    // sort order and silently returning the wrong translation.
+                    if (array_key_exists($translationKey, $result)) {
+                        throw new \LogicException(sprintf(
+                            'Translation key collision for "%s" between namespaces while loading [%s].',
+                            $translationKey,
+                            $locale->value,
+                        ));
+                    }
+
                     $result[$translationKey] ??= $value;
                 }
             }
@@ -48,17 +62,27 @@ final class TranslationLoader
      */
     private function fingerprint(Locale $locale, array $namespaces): string
     {
+        // The content hash makes edits visible immediately while the TTL
+        // bounds stale cache entries created by previous file contents.
         $parts = [];
 
         foreach ($namespaces as $namespace) {
-            $path = lang_path($locale->value.'/'.$namespace.'.php');
+            $path = $this->path($locale, $namespace);
 
             if (is_file($path)) {
-                $parts[] = $path.':'.filemtime($path).':'.filesize($path);
+                $parts[] = $path.':'.(hash_file('xxh128', $path) ?: '');
+            } else {
+                $parts[] = $path.':missing';
             }
         }
 
         return md5(implode('|', $parts));
+    }
+
+    private function path(Locale $locale, string $namespace): string
+    {
+        return ($this->languagePath === '' ? lang_path($locale->value) : $this->languagePath.'/'.$locale->value)
+            .'/'.$namespace.'.php';
     }
 
     /**

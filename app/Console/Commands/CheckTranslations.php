@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\Locale;
+use App\Support\Translations\TranslationLoader;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -12,18 +13,20 @@ final class CheckTranslations extends Command
 
     protected $description = 'Check translation key parity across supported locales';
 
-    public function handle(): int
+    public function handle(TranslationLoader $loader): int
     {
         $default = Locale::fromValueOrDefault(config('app.locale'));
         $failed = false;
         $requestedLocale = $this->option('locale');
 
         if ($requestedLocale !== null && Locale::tryFrom($requestedLocale) === null) {
+            $this->error("Unsupported locale: {$requestedLocale}");
+
             return self::FAILURE;
         }
 
         foreach (Locale::cases() as $locale) {
-            if ($locale === $default || ($this->option('locale') && $locale->value !== $this->option('locale'))) {
+            if ($locale === $default || ($requestedLocale !== null && $locale->value !== $requestedLocale)) {
                 continue;
             }
 
@@ -39,6 +42,17 @@ final class CheckTranslations extends Command
                 $this->warn("{$locale->value}: extra {$key}");
             }
         }
+
+        try {
+            foreach (Locale::cases() as $locale) {
+                $loader->load($locale);
+            }
+        } catch (\LogicException $exception) {
+            $this->error($exception->getMessage());
+            $failed = true;
+        }
+
+        $failed = $this->checkFrontendUsage($default, $loader) || $failed;
 
         return $failed ? self::FAILURE : self::SUCCESS;
     }
@@ -58,6 +72,41 @@ final class CheckTranslations extends Command
         sort($keys);
 
         return $keys;
+    }
+
+    private function checkFrontendUsage(Locale $locale, TranslationLoader $loader): bool
+    {
+        $catalog = $loader->load($locale);
+        $missing = [];
+
+        foreach (File::allFiles(resource_path('js')) as $file) {
+            if (! in_array($file->getExtension(), ['ts', 'tsx'], true)) {
+                continue;
+            }
+
+            $contents = File::get($file->getPathname());
+            preg_match_all(
+                '/\b(?:t|tc)\s*\(\s*([\'\"])(.*?)\1/s',
+                $contents,
+                $matches,
+            );
+
+            foreach (array_unique($matches[2]) as $key) {
+                if (! array_key_exists($key, $catalog)) {
+                    $missing[$key][] = $file->getPathname();
+                }
+            }
+        }
+
+        foreach ($missing as $key => $files) {
+            $this->error(sprintf(
+                'frontend: missing %s (%s)',
+                $key,
+                implode(', ', array_map(fn (string $path): string => str_replace(base_path().'/', '', $path), $files)),
+            ));
+        }
+
+        return $missing !== [];
     }
 
     /**

@@ -1,5 +1,5 @@
 import type { Auth } from '@/types/auth';
-import type { Locale } from '@/types/locale';
+import type { Locale, SupportedLocale, TranslationKey } from '@/types/locale';
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {
@@ -14,8 +14,9 @@ declare module '@inertiajs/core' {
             auth: Auth;
             sidebarOpen: boolean;
             locale: Locale;
+            supportedLocales: SupportedLocale[];
             timezone: string;
-            translations: Record<string, string>;
+            translations: Record<TranslationKey, string>;
             [key: string]: unknown;
         };
     }

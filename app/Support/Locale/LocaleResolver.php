@@ -8,40 +8,44 @@ use Illuminate\Http\Request;
 
 final class LocaleResolver
 {
+    public function __construct(private readonly LocaleRegistry $registry) {}
+
     public function resolve(Request $request): Locale
     {
         $user = $request->user();
         $sessionLocale = $request->hasSession()
             ? $request->session()->get('locale')
             : null;
-        $candidate = ($user instanceof User ? $user->locale?->value : null)
-            ?? $sessionLocale
-            ?? $request->cookie(config('locale.cookie.name'))
-            ?? $this->browserLocale($request)
-            ?? config('app.fallback_locale', Locale::default()->value);
 
-        return Locale::tryFrom((string) $candidate) ?? $this->fallbackLocale();
-    }
+        // A saved user preference is authoritative. Session and cookie are
+        // temporary preferences, while Accept-Language is only a first-visit
+        // hint and must never override an explicit application preference.
+        $candidates = [
+            $user instanceof User ? $user->locale : null,
+            $sessionLocale,
+            $request->cookie(config('locale.cookie.name')),
+        ];
 
-    private function browserLocale(Request $request): ?string
-    {
-        if (! config('locale.accept_language', true)) {
-            return null;
-        }
+        foreach ($candidates as $candidate) {
+            $locale = $this->registry->fromValue($candidate);
 
-        foreach ($request->getLanguages() as $language) {
-            $short = strtolower(substr(str_replace('_', '-', $language), 0, 2));
-            if (Locale::tryFrom($short)) {
-                return $short;
+            if ($locale !== null) {
+                return $locale;
             }
         }
 
-        return null;
-    }
+        if (config('locale.accept_language', true)) {
+            // Request::getLanguages() is already ordered by the browser's
+            // quality values; stop at the first supported language.
+            foreach ($request->getLanguages() as $language) {
+                $locale = $this->registry->fromLanguageTag($language);
 
-    private function fallbackLocale(): Locale
-    {
-        return Locale::tryFrom((string) config('app.fallback_locale', Locale::default()->value))
-            ?? Locale::default();
+                if ($locale !== null) {
+                    return $locale;
+                }
+            }
+        }
+
+        return $this->registry->default();
     }
 }

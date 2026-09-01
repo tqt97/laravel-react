@@ -8,6 +8,8 @@ final class TimezoneResolver
 
     public function resolve(?string $timezone): string
     {
+        // Intl.DateTimeFormat throws for unknown zones, so only validated
+        // values are allowed to cross the backend/frontend boundary.
         if ($this->isValid($timezone)) {
             return $timezone;
         }

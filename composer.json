@@ -66,6 +66,8 @@
             "Composer\\Config::disableProcessTimeout",
             "npm run check",
             "npm run types:check",
+            "@php artisan translations:check",
+            "@php artisan translations:generate-types --check",
             "@test"
         ],
         "types:check": [

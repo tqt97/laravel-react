@@ -2,7 +2,6 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\SetAuthenticatedLocale;
 use App\Http\Middleware\SetLocale;
 use App\Support\Locale\LocaleResolver;
 use Illuminate\Foundation\Application;
@@ -23,10 +22,6 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'app_locale']);
-
-        $middleware->alias([
-            'auth.locale' => SetAuthenticatedLocale::class,
-        ]);
 
         $middleware->web(append: [
             HandleAppearance::class,
