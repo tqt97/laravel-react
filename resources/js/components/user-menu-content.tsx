@@ -39,7 +39,7 @@ export function UserMenuContent({ user }: Props) {
                     <Link
                         className="block w-full cursor-pointer"
                         href={edit()}
-                        prefetch
+                        prefetch="hover"
                         onClick={cleanup}
                     >
                         <Settings className="mr-2" />

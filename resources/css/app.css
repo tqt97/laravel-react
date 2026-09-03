@@ -151,6 +151,12 @@
     }
 }
 
+@layer components {
+    .admin-filter-select {
+        @apply border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full min-w-0 cursor-pointer rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px];
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

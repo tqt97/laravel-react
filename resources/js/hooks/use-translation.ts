@@ -1,8 +1,10 @@
 import { usePage } from '@inertiajs/react';
 import type { Locale, TranslationKey } from '@/types/locale';
+import type { SupportedLocale } from '@/types/locale';
 type TranslationProps = {
     locale?: Locale;
     translations?: Record<string, string>;
+    supportedLocales?: SupportedLocale[];
 };
 
 type TranslationParams = Record<string, string | number>;
@@ -14,8 +16,12 @@ function interpolate(value: string, params: TranslationParams = {}): string {
 }
 
 export function useTranslation() {
-    const { locale, translations: pageTranslations } =
-        usePage<TranslationProps>().props;
+    const {
+        locale,
+        translations: pageTranslations,
+        supportedLocales: pageSupportedLocales,
+    } = usePage<TranslationProps>().props;
+    const supportedLocales = pageSupportedLocales ?? [];
     const translations: Record<string, string> = pageTranslations ?? {};
 
     const resolve = (key: string): string | undefined => translations[key];
@@ -70,5 +76,5 @@ export function useTranslation() {
         return td(key, { count, ...params });
     };
 
-    return { locale, t, td, tc };
+    return { locale, supportedLocales, t, td, tc };
 }

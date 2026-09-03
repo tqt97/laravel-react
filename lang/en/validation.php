@@ -2,6 +2,7 @@
 
 return [
     'required' => 'The :attribute field is required.',
+    'required_with' => 'The :attribute field is required when :values is present.',
     'string' => 'The :attribute must be a string.',
     'email' => 'The :attribute must be a valid email address.',
     'max' => [
@@ -12,6 +13,7 @@ return [
     ],
     'confirmed' => 'The :attribute confirmation does not match.',
     'enum' => 'The selected :attribute is invalid.',
+    'in' => 'The selected :attribute is invalid.',
     'current_password' => 'The password is incorrect.',
     'unique' => 'The :attribute has already been taken.',
     'password' => [
@@ -28,5 +30,6 @@ return [
         'current_password' => 'current password',
         'password_confirmation' => 'password confirmation',
         'locale' => 'language',
+        'timezone' => 'timezone',
     ],
 ];

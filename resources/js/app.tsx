@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { config, createInertiaApp } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
@@ -8,6 +8,11 @@ import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+// Keep prefetch opt-in to hover and short-lived so shared navigation does not
+// issue a request for every destination as soon as a layout mounts.
+config.set('prefetch.cacheFor', '30s');
+config.set('prefetch.hoverDelay', 150);
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

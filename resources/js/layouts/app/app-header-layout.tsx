@@ -13,7 +13,9 @@ export default function AppHeaderLayout({
             <SkipLink />
             <AppHeader breadcrumbs={breadcrumbs} />
             <AppContent id="main-content" tabIndex={-1} variant="header">
-                {children}
+                <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-3 py-5 sm:px-4 md:gap-6 md:py-6 lg:px-5">
+                    {children}
+                </div>
             </AppContent>
         </AppShell>
     );

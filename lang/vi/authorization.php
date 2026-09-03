@@ -8,6 +8,10 @@ return [
         'system_role' => 'Không thể thay đổi system role.',
         'last_super_admin' => 'Phải luôn bảo vệ Super Admin cuối cùng.',
         'invalid_delegation' => 'Ủy quyền phân quyền này không hợp lệ.',
+        'selected_users_missing' => 'Một hoặc nhiều người dùng đã chọn không còn tồn tại.',
+        'selected_users_cannot_delete' => 'Một hoặc nhiều người dùng đã chọn không thể bị xóa.',
+        'selected_users_cannot_restore' => 'Một hoặc nhiều người dùng đã chọn không thể khôi phục.',
+        'last_admin' => 'Phải luôn bảo vệ tài khoản quản trị viên cuối cùng.',
     ],
     'roles' => ['super_admin' => 'Super Admin', 'admin' => 'Quản trị viên', 'user' => 'Người dùng'],
     'permissions' => [

@@ -13,8 +13,8 @@ class LocaleRegistryTest extends TestCase
         $registry = app(LocaleRegistry::class);
 
         $this->assertSame([
-            ['value' => 'en', 'label' => 'English'],
-            ['value' => 'vi', 'label' => 'Tiếng Việt'],
+            ['value' => 'en', 'label' => 'English', 'flag' => '🇬🇧'],
+            ['value' => 'vi', 'label' => 'Tiếng Việt', 'flag' => '🇻🇳'],
         ], $registry->all());
     }
 
